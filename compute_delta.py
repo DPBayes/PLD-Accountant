@@ -9,7 +9,7 @@ A code for computing exact DP guarantees.
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
 Computing Exact Guarantees for Differential Privacy.
-arXiv preprint arXiv:?.?. (2019)
+arXiv preprint arXiv:1906.03049 (2019)
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 '''
 

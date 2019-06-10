@@ -6,7 +6,7 @@ A code for computing exact DP guarantees.
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
 Computing Exact Guarantees for Differential Privacy.
-arXiv preprint arXiv:?.?. (2019)
+arXiv preprint arXiv:1906.03049 (2019)
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 '''
 
@@ -96,7 +96,7 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=
 
         if(eps_0<-L or eps_0>L):
             break
-            
+
         # Integrands and integral domain
         exp_e = 1-np.exp(eps_0-x)
         dexp_e = -np.exp(eps_0-x)
