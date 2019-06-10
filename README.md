@@ -1,5 +1,5 @@
 # PLD-Accountant
-Python code for computing exact guarantees for differential privacy.  
+Python code for computing exact DP-guarantees for the subsampled Gaussian mechanism.  
 
 
 The method is described in:
