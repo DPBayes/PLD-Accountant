@@ -120,7 +120,7 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
 
 
