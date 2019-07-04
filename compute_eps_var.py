@@ -27,7 +27,7 @@ import numpy as np
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
 
-def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=5E6,L=20.0):
+def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
 
     nx = int(nx)
 
@@ -154,7 +154,7 @@ def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=5E6,L=20.0):
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
 
-def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=5E6,L=20.0):
+def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
 
     nx = int(nx)
 

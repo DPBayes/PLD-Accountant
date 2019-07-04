@@ -27,7 +27,7 @@ import numpy as np
 # L -  limit for the integral
 # ncomp - compute up to ncomp number of compositions
 
-def get_delta_unbounded(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20.0):
+def get_delta_unbounded(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
     nx = int(nx)
 
@@ -96,7 +96,7 @@ def get_delta_unbounded(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20.0)
 # ncomp - compute up to ncomp number of compositions
 
 
-def get_delta_bounded(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20.0):
+def get_delta_bounded(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
     nx = int(nx)
 

@@ -26,7 +26,7 @@ import numpy as np
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
 
-def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=5E6,L=20.0):
+def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
     nx = int(nx)
 
@@ -108,7 +108,7 @@ def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=5E6,L=20.0):
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
 
-def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=5E6,L=20.0):
+def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
     nx = int(nx)
 

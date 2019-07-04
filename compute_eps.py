@@ -29,7 +29,7 @@ import numpy as np
 # L -  limit for the integral
 # ncomp - compute up to ncomp number of compositions
 
-def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=30.0):
+def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
     nx = int(nx)
 
@@ -143,7 +143,7 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
 # L -  limit for the integral
 # ncomp - compute up to ncomp number of compositions
 
-def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20.0):
+def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
     nx = int(nx)
 
