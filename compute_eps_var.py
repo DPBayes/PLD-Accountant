@@ -20,16 +20,14 @@ import numpy as np
 
 
 
-
 # Parameters:
 # target_delta - target delta
-# sigma - noise sigma
-# q - subsampling ratio
+# sigma_t - array of sigma values
+# q_t - array of q values
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
-# ncomp - compute up to ncomp number of compositions
 
-def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=30.0):
+def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=5E6,L=20.0):
 
     nx = int(nx)
 
@@ -39,33 +37,47 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
     x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
 
 
+    fx_table=[]
+    F_prod=np.ones(x.size)
 
-    # first ii for which x(ii)>log(1-q),
-    # i.e. start of the integral domain
-    ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
+    ncomp=sigma_t.size
+
+    if(q_t.size != ncomp):
+        print('The arrays for q and sigma are of different size!')
+        return float('inf')
+
+    for ij in range(ncomp):
+
+        sigma=sigma_t[ij]
+        q=q_t[ij]
+
+        # first ii for which x(ii)>log(1-q),
+        # i.e. start of the integral domain
+        ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
+
+        # Evaluate the PLD distribution,
+        # The case of remove/add relation (Subsection 5.1)
+        Linvx = (sigma**2)*np.log((np.exp(x[ii-1:])-(1-q))/q) + 0.5
+        ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
+        	q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
+        ey = np.exp(x[ii-1:])
+        dLinvx = (sigma**2)/(1-(1-q)/ey);
+
+        fx = np.zeros(nx)
+        fx[ii-1:] =  np.real(ALinvx*dLinvx)
+        half = int(nx/2)
+
+        # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
+        temp = np.copy(fx[half:])
+        fx[half:] = np.copy(fx[:half])
+        fx[:half] = temp
+
+        # Compute the DFT
+        FF1 = np.fft.fft(fx*dx)
+        F_prod = F_prod*FF1
 
     #Initial value \epsilon_0
     eps_0 = 0
-
-    # Evaluate the PLD distribution,
-    # The case of remove/add relation (Subsection 5.1)
-    Linvx = (sigma**2)*np.log((np.exp(x[ii-1:])-(1-q))/q) + 0.5
-    ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-    	q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
-    ey = np.exp(x[ii-1:])
-    dLinvx = (sigma**2)/(1-(1-q)/ey);
-
-    fx = np.zeros(nx)
-    fx[ii-1:] =  np.real(ALinvx*dLinvx)
-    half = int(nx/2)
-
-    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-    temp = np.copy(fx[half:])
-    fx[half:] = np.copy(fx[:half])
-    fx[:half] = temp
-
-    # Compute the DFT
-    FF1 = np.fft.fft(fx*dx)
 
     exp_e = 1-np.exp(eps_0-x)
     # first jj for which 1-exp(eps_0-x)>0,
@@ -73,7 +85,7 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
     jj = int(np.floor(float(nx*(L+eps_0)/(2*L))))
 
     # Compute the inverse DFT
-    cfx = np.fft.ifft((FF1**ncomp/dx))
+    cfx = np.fft.ifft((F_prod/dx))
 
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     temp = np.copy(cfx[half:])
@@ -92,8 +104,8 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
 
     # Here tol is the stopping criterion for Newton's iteration
     # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
-
     while np.abs(delta_temp - target_delta) > tol_newton:
+
         #print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
 
         # Update epsilon
@@ -125,7 +137,7 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
 
 
@@ -137,13 +149,12 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
 
 # Parameters:
 # target_delta - target delta
-# sigma - noise sigma
-# q - subsampling ratio
+# sigma_t - array of sigma values
+# q_t - array of q values
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
-# ncomp - compute up to ncomp number of compositions
 
-def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20.0):
+def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=5E6,L=20.0):
 
     nx = int(nx)
 
@@ -155,42 +166,59 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20
     #Initial value \epsilon_0
     eps_0 = 0
 
-    ii = 1
-    # Evaluate the PLD distribution,
-    # This is the case of substitution relation (subsection 5.2)
-    c = q*np.exp(-1/(2*sigma**2))
-    ey = np.exp(x[ii-1:])
-    term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
-    term1=np.maximum(term1,1e-16)
-    Linvx = (sigma**2)*np.log(term1)
+    fx_table=[]
+    F_prod=np.ones(x.size)
 
-    sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
-    nom1 = 4*c**2*ey - 2*(1-q)**2*ey*(1-ey)
-    term1 = nom1/(2*sq)
-    nom2 = term1 + (1-q)*ey
-    nom2 = nom2*(sq+(1-q)*(1-ey))
-    dLinvx = sigma**2*nom2/(4*c**2*ey)
+    ncomp=sigma_t.size
 
-    ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-    q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
-    fx = np.zeros(nx)
-    fx[ii-1:] =  np.real(ALinvx*dLinvx)
-    half = int(nx/2)
+    if(q_t.size != ncomp):
+        print('The arrays for q and sigma are of different size!')
+        return float('inf')
 
-    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-    temp = np.copy(fx[half:])
-    fx[half:] = np.copy(fx[:half])
-    fx[:half] = temp
+    for ij in range(ncomp):
 
-    FF1 = np.fft.fft(fx*dx) # Compute the DFFT
+        sigma=sigma_t[ij]
+        q=q_t[ij]
+
+        ii = 1
+        # Evaluate the PLD distribution,
+        # This is the case of substitution relation (subsection 5.2)
+        ey = np.exp(x[ii-1:])
+        c = q*np.exp(-1/(2*sigma**2))
+        term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
+        term1=np.maximum(term1,1e-16)
+        Linvx = (sigma**2)*np.log(term1)
+
+        sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
+        nom1 = 4*c**2*ey - 2*(1-q)**2*ey*(1-ey)
+        term1 = nom1/(2*sq)
+        nom2 = term1 + (1-q)*ey
+        nom2 = nom2*(sq+(1-q)*(1-ey))
+        dLinvx = sigma**2*nom2/(4*c**2*ey)
+
+
+        ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2))
+            + q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
+        fx = np.zeros(nx)
+        fx[ii-1:] =  np.real(ALinvx*dLinvx)
+        half = int(nx/2)
+
+        # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
+        temp = np.copy(fx[half:])
+        fx[half:] = np.copy(fx[:half])
+        fx[:half] = temp
+
+        FF1 = np.fft.fft(fx*dx) # Compute the DFFT
+        F_prod = F_prod*FF1
 
     exp_e = 1-np.exp(eps_0-x)
+
     # first jj for which 1-exp(eps_0-x)>0,
     # i.e. start of the integral domain
     jj = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
     # Compute the inverse DFT
-    cfx = np.fft.ifft((FF1**ncomp/dx))
+    cfx = np.fft.ifft((F_prod/dx))
 
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     temp = np.copy(cfx[half:])
@@ -211,7 +239,7 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20
     # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
     while np.abs(delta_temp - target_delta) > tol_newton:
 
-        #print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
+        # print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
 
         # Update epsilon
         eps_0 = eps_0 - (delta_temp - target_delta)/derivative
@@ -243,7 +271,7 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
     #
     # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')

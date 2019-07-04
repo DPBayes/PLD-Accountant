@@ -109,13 +109,18 @@ def get_delta_bounded(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=5E6,L=20.0):
     # Evaluate the PLD distribution,
     # This is the case of substitution relation (subsection 5.2)
     c = q*np.exp(-1/(2*sigma**2))
-    Linvx = (sigma**2)*np.log((-(1-q)*(1-np.exp(x[ii-1:])) +
-    np.sqrt((1-q)**2*(1-np.exp(x[ii-1:]))**2 + 4*c**2*np.exp(x[ii-1:])))/(2*c))
-    sq = np.sqrt((1-q)**2*(1-np.exp(x[ii-1:]))**2 + 4*c**2*np.exp(x[ii-1:]))
-    nom1 = 4*c**2*np.exp(x[ii-1:]) - 2*(1-q)**2*np.exp(x[ii-1:])*(1-np.exp(x[ii-1:]))
+    ey = np.exp(x[ii-1:])
+    term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
+    term1=np.maximum(term1,1e-16)
+    Linvx = (sigma**2)*np.log(term1)
+
+    sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
+    nom1 = 4*c**2*ey - 2*(1-q)**2*ey*(1-ey)
     term1 = nom1/(2*sq)
-    nom2 = term1 + (1-q)*np.exp(x[ii-1:])
-    dLinvx = sigma**2*(nom2/(sq - (1-q)*(1-np.exp(x[ii-1:]))))
+    nom2 = term1 + (1-q)*ey
+    nom2 = nom2*(sq+(1-q)*(1-ey))
+    dLinvx = sigma**2*nom2/(4*c**2*ey)
+
     ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
     q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
     fx = np.zeros(nx)
