@@ -8,17 +8,14 @@ import compute_eps_var
 import compute_delta
 import compute_delta_var
 
-#import pld_accountant
-
-
 
 
 # Examples for fixed q and sigma
 
-L=60
+L=100
 nx=2E6
 q=0.01
-sigma=1.2
+sigma=0.9
 nc=10000 #number of compositions
 
 delta=1e-5
@@ -35,7 +32,7 @@ d  = compute_delta.get_delta_bounded(q=q,sigma=sigma,target_eps=eps,L=L,nx=nx,nc
 
 # Examples for varying sigma and q
 
-L=20
+L=100
 nx=2E5
 nc=500
 sigmas=np.linspace(1.2,1.6,nc)
