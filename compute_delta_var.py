@@ -55,13 +55,13 @@ def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
         # Evaluate the PLD distribution,
         # The case of remove/add relation (Subsection 5.1)
-        Linvx = (sigma**2)*np.log((np.exp(x[ii-1:])-(1-q))/q) + 0.5
+        Linvx = (sigma**2)*np.log((np.exp(x[ii+1:])-(1-q))/q) + 0.5
         ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
         	q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
-        dLinvx = (sigma**2*np.exp(x[ii-1:]))/(np.exp(x[ii-1:])-(1-q));
+        dLinvx = (sigma**2*np.exp(x[ii+1:]))/(np.exp(x[ii+1:])-(1-q));
 
         fx = np.zeros(nx)
-        fx[ii-1:] =  np.real(ALinvx*dLinvx)
+        fx[ii+1:] =  np.real(ALinvx*dLinvx)
         half = int(nx/2)
 
         # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
@@ -88,7 +88,7 @@ def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
     # Evaluate \delta(target_eps) and \delta'(target_eps)
     exp_e = 1-np.exp(target_eps-x)
     integrand = exp_e*cfx
-    sum_int=np.sum(integrand[jj-1:])
+    sum_int=np.sum(integrand[jj+1:])
     delta = sum_int*dx
 
     print('Unbounded DP-delta after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
@@ -131,12 +131,10 @@ def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
         sigma=sigma_t[ij]
         q=q_t[ij]
 
-        ii = 1
-
         # Evaluate the PLD distribution,
         # This is the case of substitution relation (subsection 5.2)
         c = q*np.exp(-1/(2*sigma**2))
-        ey = np.exp(x[ii-1:])
+        ey = np.exp(x)
         term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
         term1=np.maximum(term1,1e-16)
         Linvx = (sigma**2)*np.log(term1)
@@ -150,8 +148,8 @@ def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
         ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
         q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
-        fx = np.zeros(nx)
-        fx[ii-1:] =  np.real(ALinvx*dLinvx)
+
+        fx =  np.real(ALinvx*dLinvx)
         half = int(nx/2)
 
         # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
@@ -177,7 +175,7 @@ def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
     # Evaluate \delta(target_eps) and \delta'(target_eps)
     exp_e = 1-np.exp(target_eps-x)
     integrand = exp_e*cfx
-    sum_int=np.sum(integrand[jj-1:])
+    sum_int=np.sum(integrand[jj+1:])
     delta = sum_int*dx
 
 

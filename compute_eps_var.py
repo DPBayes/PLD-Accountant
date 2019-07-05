@@ -57,14 +57,14 @@ def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
 
         # Evaluate the PLD distribution,
         # The case of remove/add relation (Subsection 5.1)
-        Linvx = (sigma**2)*np.log((np.exp(x[ii-1:])-(1-q))/q) + 0.5
+        Linvx = (sigma**2)*np.log((np.exp(x[ii+1:])-(1-q))/q) + 0.5
         ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
         	q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
-        ey = np.exp(x[ii-1:])
+        ey = np.exp(x[ii+1:])
         dLinvx = (sigma**2)/(1-(1-q)/ey);
 
         fx = np.zeros(nx)
-        fx[ii-1:] =  np.real(ALinvx*dLinvx)
+        fx[ii+1:] =  np.real(ALinvx*dLinvx)
         half = int(nx/2)
 
         # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
@@ -97,8 +97,8 @@ def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
     dexp_e = -np.exp(eps_0-x)
     integrand = exp_e*cfx
     integrand2 = dexp_e*cfx
-    sum_int=np.sum(integrand[jj-1:])
-    sum_int2=np.sum(integrand2[jj-1:])
+    sum_int=np.sum(integrand[jj+1:])
+    sum_int2=np.sum(integrand2[jj+1:])
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
@@ -122,14 +122,14 @@ def get_eps_unbounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
         kk = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
         integrand = exp_e*cfx
-        sum_int=np.sum(integrand[kk-1:])
+        sum_int=np.sum(integrand[kk+1:])
         delta_temp = sum_int*dx
 
         # Evaluate \delta(eps_0) and \delta'(eps_0)
         integrand = exp_e*cfx
         integrand2 = dexp_e*cfx
-        sum_int=np.sum(integrand[kk-1:])
-        sum_int2=np.sum(integrand2[kk-1:])
+        sum_int=np.sum(integrand[kk+1:])
+        sum_int2=np.sum(integrand2[kk+1:])
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
 
@@ -180,10 +180,9 @@ def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
         sigma=sigma_t[ij]
         q=q_t[ij]
 
-        ii = 1
         # Evaluate the PLD distribution,
         # This is the case of substitution relation (subsection 5.2)
-        ey = np.exp(x[ii-1:])
+        ey = np.exp(x)
         c = q*np.exp(-1/(2*sigma**2))
         term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
         term1=np.maximum(term1,1e-16)
@@ -199,8 +198,8 @@ def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
 
         ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2))
             + q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
-        fx = np.zeros(nx)
-        fx[ii-1:] =  np.real(ALinvx*dLinvx)
+
+        fx =  np.real(ALinvx*dLinvx)
         half = int(nx/2)
 
         # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
@@ -230,8 +229,8 @@ def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
     dexp_e = -np.exp(eps_0-x)
     integrand = exp_e*cfx
     integrand2 = dexp_e*cfx
-    sum_int=np.sum(integrand[jj-1:])
-    sum_int2=np.sum(integrand2[jj-1:])
+    sum_int=np.sum(integrand[jj+1:])
+    sum_int2=np.sum(integrand2[jj+1:])
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
@@ -256,14 +255,14 @@ def get_eps_bounded(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
         kk = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
         integrand = exp_e*cfx
-        sum_int=np.sum(integrand[kk-1:])
+        sum_int=np.sum(integrand[kk+1:])
         delta_temp = sum_int*dx
 
         # Evaluate \delta(eps_0) and \delta'(eps_0)
         integrand = exp_e*cfx
         integrand2 = dexp_e*cfx
-        sum_int=np.sum(integrand[kk-1:])
-        sum_int2=np.sum(integrand2[kk-1:])
+        sum_int=np.sum(integrand[kk+1:])
+        sum_int2=np.sum(integrand2[kk+1:])
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
 
