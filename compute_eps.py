@@ -49,11 +49,9 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
     # The case of remove/add relation (Subsection 5.1)
     ey = np.exp(x[ii+1:])
     Linvx = (sigma**2)*np.log((np.exp(x[ii+1:])-(1-q))/q) + 0.5
-    aa = np.minimum(-Linvx*Linvx/(2*sigma**2),60)
-    bb = np.minimum(-(Linvx-1)*(Linvx-1)/(2*sigma**2),60)
 
-    ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(aa) +
-    	q*np.exp(bb));
+    ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
+    	q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
     dLinvx = (sigma**2)*ey/(ey-(1-q));
 
     fx = np.zeros(nx)
