@@ -3,37 +3,37 @@
 
 
 
-
 '''
-A code for computing exact DP guarantees.
+Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
-Computing Exact Guarantees for Differential Privacy.
+Computing Tight Differential Privacy Guarantees Using FFT.
 arXiv preprint arXiv:1906.03049 (2019)
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 '''
 
 
-
-
 import numpy as np
 
 
+def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
+    """
+    This function returns the epsilon as a function of delta,
+    for the case of Poisson subsampling with remove/add neighbouring relation of datasets.
 
-# Parameters:
-# target_delta - target delta
-# sigma - noise sigma
-# q - subsampling ratio
-# nx - number of points in the discretisation grid
-# L -  limit for the integral
-# ncomp - compute up to ncomp number of compositions
-
-def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
+    Parameters:
+      target_delta - target delta
+      sigma - noise sigma
+      q - subsampling ratio
+      nx - number of points in the discretisation grid
+      L -  limit for the integral
+      ncomp - number of compositions
+    """
 
     nx = int(nx)
 
-    tol_newton = 1e-10 # set this to, e.g., 0.01*target_delta
+    tol_newton = 1e-13 # set this to small enough, e.g., 0.01*target_delta
 
     dx = 2.0*L/nx # discretisation interval \Delta x
     x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
@@ -66,7 +66,6 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
     # Compute the DFT
     FF1 = np.fft.fft(fx*dx)
 
-    exp_e = 1-np.exp(eps_0-x)
     # Find first jj for which 1-exp(eps_0-x)>0,
     # i.e. start of the integral domain
     jj = int(np.floor(float(nx*(L+eps_0)/(2*L))))
@@ -80,12 +79,12 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
     cfx[:half] = temp
 
     # Evaluate \delta(eps_0) and \delta'(eps_0)
-    exp_e = 1-np.exp(eps_0-x)
-    dexp_e = -np.exp(eps_0-x)
-    integrand = exp_e*cfx
-    integrand2 = dexp_e*cfx
-    sum_int=np.sum(integrand[jj+1:])
-    sum_int2=np.sum(integrand2[jj+1:])
+    dexp_e = -np.exp(eps_0-x[jj+1:])
+    exp_e = 1+dexp_e
+    integrand = exp_e*cfx[jj+1:]
+    integrand2 = dexp_e*cfx[jj+1:]
+    sum_int=np.sum(integrand)
+    sum_int2=np.sum(integrand2)
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
@@ -102,22 +101,19 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
         if(eps_0<-L or eps_0>L):
             break
 
-        # Integrands and integral domain
-        exp_e = 1-np.exp(eps_0-x)
-        dexp_e = -np.exp(eps_0-x)
         # Find first kk for which 1-exp(eps_0-x)>0,
         # i.e. start of the integral domain
         kk = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
-        integrand = exp_e*cfx
-        sum_int=np.sum(integrand[kk+1:])
-        delta_temp = sum_int*dx
+        # Integrands and integral domain
+        dexp_e = -np.exp(eps_0-x[kk+1:])
+        exp_e = 1+dexp_e
 
         # Evaluate \delta(eps_0) and \delta'(eps_0)
-        integrand = exp_e*cfx
-        integrand2 = dexp_e*cfx
-        sum_int=np.sum(integrand[kk+1:])
-        sum_int2=np.sum(integrand2[kk+1:])
+        integrand = exp_e*cfx[kk+1:]
+        integrand2 = dexp_e*cfx[kk+1:]
+        sum_int=np.sum(integrand)
+        sum_int2=np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
 
@@ -125,29 +121,31 @@ def get_epsilon_unbounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        print('DP-epsilon (in R-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
 
 
 
 
 
+def get_epsilon_S(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
+    """
+    This function returns the epsilon as a function of delta,
+    for the case of Poisson subsampling with the substitute neighbouring relation of datasets.
 
-
-# Parameters:
-# target_delta - target delta
-# sigma - noise sigma
-# q - subsampling ratio
-# nx - number of points in the discretisation grid
-# L -  limit for the integral
-# ncomp - compute up to ncomp number of compositions
-
-def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
+    Parameters:
+      target_delta - target delta
+      sigma - noise sigma
+      q - subsampling ratio
+      nx - number of points in the discretisation grid
+      L -  limit for the integral
+      ncomp - number of compositions
+    """
 
     nx = int(nx)
 
-    tol_newton = 1e-10 # set this to, e.g., 0.01*target_delta
+    tol_newton = 1e-10 # set this to small enough, e.g., 0.01*target_delta
 
     dx = 2.0*L/nx # discretisation interval \Delta x
     x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
@@ -185,7 +183,6 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20
 
     FF1 = np.fft.fft(fx*dx) # Compute the DFFT
 
-    exp_e = 1-np.exp(eps_0-x)
     # Find first jj for which 1-exp(eps_0-x)>0,
     # i.e. start of the integral domain
     jj = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
@@ -199,12 +196,12 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20
     cfx[:half] = temp
 
     # Evaluate \delta(eps_0) and \delta'(eps_0)
-    exp_e = 1-np.exp(eps_0-x)
-    dexp_e = -np.exp(eps_0-x)
-    integrand = exp_e*cfx
-    integrand2 = dexp_e*cfx
-    sum_int=np.sum(integrand[jj+1:])
-    sum_int2=np.sum(integrand2[jj+1:])
+    dexp_e = -np.exp(eps_0-x[jj+1:])
+    exp_e = 1+dexp_e
+    integrand = exp_e*cfx[jj+1:]
+    integrand2 = dexp_e*cfx[jj+1:]
+    sum_int=np.sum(integrand)
+    sum_int2=np.sum(integrand2)
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
@@ -220,23 +217,19 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20
         if(eps_0<-L or eps_0>L):
             break
 
-        # Integrands and integral domain
-        exp_e = 1-np.exp(eps_0-x)
-        dexp_e = -np.exp(eps_0-x)
-
         # Find first kk for which 1-exp(eps_0-x)>0,
         # i.e. start of the integral domain
         kk = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
-        integrand = exp_e*cfx
-        sum_int=np.sum(integrand[kk+1:])
-        delta_temp = sum_int*dx
+        # Numerical integrands and integral domain
+        dexp_e = -np.exp(eps_0-x[kk+1:])
+        exp_e = 1+dexp_e
 
         # Evaluate \delta(eps_0) and \delta'(eps_0)
-        integrand = exp_e*cfx
-        integrand2 = dexp_e*cfx
-        sum_int=np.sum(integrand[kk+1:])
-        sum_int2=np.sum(integrand2[kk+1:])
+        integrand = exp_e*cfx[kk+1:]
+        integrand2 = dexp_e*cfx[kk+1:]
+        sum_int=np.sum(integrand)
+        sum_int2=np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
 
@@ -244,8 +237,5 @@ def get_epsilon_bounded(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        print('DP-epsilon (in S-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
-    #
-    # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
-    # return np.real(eps_0)

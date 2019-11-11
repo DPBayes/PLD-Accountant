@@ -5,10 +5,10 @@
 
 
 '''
-A code for computing exact DP guarantees.
+Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
-Computing Exact Guarantees for Differential Privacy.
+Computing Tight Differential Privacy Guarantees Using FFT.
 arXiv preprint arXiv:1906.03049 (2019)
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 '''
@@ -19,14 +19,22 @@ import numpy as np
 
 
 
-# Parameters:
-# target_delta - target delta
-# sigma_t - array of sigma values
-# q_t - array of q values
-# nx - number of points in the discretisation grid
-# L -  limit for the integral
+def get_delta_R(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
-def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
+    """
+    This function returns the delta as a function of epsilon,
+    for the case of Poisson subsampling with the remove/add neighbouring relation of datasets.
+    The function computes delta for varying parameters sigma and q,
+    the input given as an array of parameters.
+
+    Parameters:
+      target_eps - target epsilon
+      sigma_t - array of sigmas
+      q_t - array of subsampling ratios
+      nx - number of points in the discretisation grid
+      L -  limit for the integral
+      ncomp - number of compositions
+    """
 
     nx = int(nx)
 
@@ -86,12 +94,12 @@ def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
     cfx[:half] = temp
 
     # Evaluate \delta(target_eps) and \delta'(target_eps)
-    exp_e = 1-np.exp(target_eps-x)
-    integrand = exp_e*cfx
-    sum_int=np.sum(integrand[jj+1:])
+    exp_e = 1-np.exp(target_eps-x[jj+1:])
+    integrand = exp_e*cfx[jj+1:]
+    sum_int=np.sum(integrand)
     delta = sum_int*dx
 
-    print('Unbounded DP-delta after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
+    print('DP-delta (in R-relation) after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
 
     return np.real(delta)
 
@@ -99,16 +107,22 @@ def get_delta_unbounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
 
 
+def get_delta_S(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
+    """
+    This function returns the delta as a function of epsilon,
+    for the case of Poisson subsampling with the substitute relation of datasets.
+    The function computes delta for varying parameters sigma and q,
+    the input given as an array of parameters.
 
-# Parameters:
-# target_delta - target delta
-# sigma_t - array of sigma values
-# q_t - array of q values
-# nx - number of points in the discretisation grid
-# L -  limit for the integral
-
-def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
+    Parameters:
+      target_eps - target epsilon
+      sigma_t - array of sigmas
+      q_t - array of subsampling ratios
+      nx - number of points in the discretisation grid
+      L -  limit for the integral
+      ncomp - number of compositions
+    """
 
     nx = int(nx)
 
@@ -173,11 +187,11 @@ def get_delta_bounded(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
     cfx[:half] = temp
 
     # Evaluate \delta(target_eps) and \delta'(target_eps)
-    exp_e = 1-np.exp(target_eps-x)
-    integrand = exp_e*cfx
-    sum_int=np.sum(integrand[jj+1:])
+    exp_e = 1-np.exp(target_eps-x[jj+1:])
+    integrand = exp_e*cfx[jj+1:]
+    sum_int=np.sum(integrand)
     delta = sum_int*dx
 
 
-    print('Bounded DP-delta after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
+    print('DP-delta (in S-relation) after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
     return np.real(delta)
