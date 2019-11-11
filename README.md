@@ -1,4 +1,4 @@
-# PLD-Accountant
+# Fourier Accountant
 
 Python code for computing tight DP-guarantees for the subsampled Gaussian mechanism.  
 
