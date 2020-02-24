@@ -16,6 +16,25 @@ The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 import numpy as np
 
 
+def check_args(target_delta, sigma, q, ncomp, nx, L):
+    if target_delta < 0:
+        raise ValueError("target_delta must be a positive number")
+    if target_delta > 1:
+        raise ValueError("target_delta must not exceed 1")
+    if sigma <= 0:
+        raise ValueError("sigma must be a positive number")
+    if q <= 0:
+        raise ValueError("q must be a positive number")
+    if q > 1:
+        raise ValueError("q must not exceed 1")
+    if ncomp <= 0:
+        raise ValueError("ncomp must be a positive integer")
+    if nx <= 0:
+        raise ValueError("nx must be a positive integer")
+    if L <=0:
+        raise ValueError("L must be a positive number")
+
+
 def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
     """
@@ -30,6 +49,7 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
       L -  limit for the integral
       ncomp - number of compositions
     """
+    check_args(target_delta, sigma, q, ncomp, nx, L)
 
     nx = int(nx)
 
@@ -142,6 +162,7 @@ def get_epsilon_S(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
       L -  limit for the integral
       ncomp - number of compositions
     """
+    check_args(target_delta, sigma, q, ncomp, nx, L)
 
     nx = int(nx)
 
