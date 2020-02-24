@@ -108,6 +108,8 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
+    if np.isnan(delta_temp):
+        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
 
     # Here tol is the stopping criterion for Newton's iteration
     # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
@@ -138,10 +140,9 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
         derivative = sum_int2*dx
 
     if(np.real(eps_0) < -L or np.real(eps_0) > L):
-        print('Error: epsilon out of [-L,L] window, please check the parameters.')
-        return float('inf')
+        raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
     else:
-        print('DP-epsilon (in R-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        # print('DP-epsilon (in R-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
 
 
@@ -226,6 +227,9 @@ def get_epsilon_S(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
+    if np.isnan(delta_temp):
+        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+
     # Here tol is the stopping criterion for Newton's iteration
     # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
     while np.abs(delta_temp - target_delta) > tol_newton:
@@ -255,8 +259,7 @@ def get_epsilon_S(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
         derivative = sum_int2*dx
 
     if(np.real(eps_0) < -L or np.real(eps_0) > L):
-        print('Error: epsilon out of [-L,L] window, please check the parameters.')
-        return float('inf')
+        raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
     else:
-        print('DP-epsilon (in S-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        # print('DP-epsilon (in S-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
