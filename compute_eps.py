@@ -15,7 +15,6 @@ The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 
 import numpy as np
 
-
 def check_args(target_delta, sigma, q, ncomp, nx, L):
     if target_delta < 0:
         raise ValueError("target_delta must be a positive number")
@@ -145,10 +144,6 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
         # print('DP-epsilon (in R-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
 
-
-
-
-
 def get_epsilon_S(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
 
     """
@@ -209,8 +204,14 @@ def get_epsilon_S(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     # i.e. start of the integral domain
     jj = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
+    FF1_transformed = FF1**ncomp
+    if np.any(np.isinf(FF1_transformed)):
+        raise ValueError("Computation reached an infinite value. This can happen if sigma is chosen too small, please check the parameters.")
+
+    FF1_transformed /= dx
+
     # Compute the inverse DFT
-    cfx = np.fft.ifft((FF1**ncomp/dx))
+    cfx = np.fft.ifft(FF1_transformed)
 
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     temp = np.copy(cfx[half:])
