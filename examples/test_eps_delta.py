@@ -1,13 +1,10 @@
 
-
-
 import numpy as np
-import compute_eps
-import compute_eps_var
+import fourier_accountant.compute_eps as compute_eps
+import fourier_accountant.compute_eps_var as compute_eps_var
 
-import compute_delta
-import compute_delta_var
-
+import fourier_accountant.compute_delta as compute_delta
+import fourier_accountant.compute_delta_var as compute_delta_var
 
 
 # Examples for fixed q and sigma
