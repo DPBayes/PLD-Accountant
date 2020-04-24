@@ -79,7 +79,11 @@ def get_delta_R(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     sum_int=np.sum(integrand)
     delta = sum_int*dx
 
-    print('DP-delta (in R-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
+  
+    if np.isnan(delta):
+        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+
+    # print('DP-delta (in R-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
 
     return np.real(delta)
 
@@ -142,8 +146,14 @@ def get_delta_S(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     # i.e. start of the integral domain
     jj = int(np.floor(float(nx*(L+np.real(target_eps))/(2*L))))
 
+    FF1_transformed = FF1**ncomp
+    if np.any(np.isinf(FF1_transformed)):
+        raise ValueError("Computation reached an infinite value. This can happen if sigma is chosen too small, please check the parameters.")
+
+    FF1_transformed /= dx
+
     # Compute the inverse DFT
-    cfx = np.fft.ifft((FF1**ncomp/dx))
+    cfx = np.fft.ifft(FF1_transformed)
 
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     temp = np.copy(cfx[half:])
@@ -157,5 +167,8 @@ def get_delta_S(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     delta = sum_int*dx
 
 
-    print('DP-delta (in S-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
+    if np.isnan(delta):
+        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+
+    # print('DP-delta (in S-relation) after ' + str(int(ncomp)) + ' compositions:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
     return np.real(delta)
