@@ -1,8 +1,4 @@
 
-
-
-
-
 '''
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 The method is described in
@@ -12,23 +8,39 @@ arXiv preprint arXiv:1906.03049 (2019)
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 '''
 
-
-
 import numpy as np
 
+__all__ = ['get_delta', 'get_delta_S']
 
-def get_delta_R(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
+
+def get_delta_R(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
     """
-    This function returns the delta as a function of epsilon,
-    for the case of Poisson subsampling with the remove/add neighbouring relation of datasets.
+    Computes the DP delta for the remove/add neighbouring relation of datasets.
+    
+    The computed delta privacy value is for the composition of ncomp subsequent
+    operations over batches Poisson-subsampled with rate q from the dataset, each
+    perturbed by privacy noise sigma.
+
+    Note that this function relies on numerical approximations, which are influenced
+    by choice of parameters nx and L. Increasing L roughly increases the range over
+    which the integral of the privacy loss distribution is approximated, while nx is
+    the number of evaluation points in [-L,L]. If you find results output by this function
+    to be inaccurate, try adjusting these parameters. Refer to [1] for more details.
 
     Parameters:
-      target_eps - target epsilon
-      sigma - noise sigma
-      q - subsampling ratio
-      nx - number of points in the discretisation grid
-      L -  limit for the integral
-      ncomp - number of compositions
+        target_eps (float): Target epsilon
+        sigma (float): Privacy noise sigma
+        q (float): Subsampling ratio, i.e., how large are batches relative to the dataset
+        ncomp (int): Number of compositions, i.e., how many subsequent batch operations are queried
+        nx (int): Number of discretiation points
+        L (float):  Limit for the approximation of the privacy loss distribution integral
+
+    Returns:
+        (float): delta value 
+
+    References:
+        Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049  
     """
 
     nx = int(nx)
@@ -88,25 +100,35 @@ def get_delta_R(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     return np.real(delta)
 
 
-
-
-
-def get_delta_S(target_eps=1.0,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
-
+def get_delta_S(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
     """
-    This function returns the delta as a function of epsilon,
-    for the case of Poisson subsampling with the substitute neighbouring relation of datasets.
+    Computes the DP delta for the substitute neighbouring relation of datasets.
+    
+    The computed delta privacy value is for the composition of ncomp subsequent
+    operations over batches Poisson-subsampled with rate q from the dataset, each
+    perturbed by privacy noise sigma.
+
+    Note that this function relies on numerical approximations, which are influenced
+    by choice of parameters nx and L. Increasing L roughly increases the range over
+    which the integral of the privacy loss distribution is approximated, while nx is
+    the number of evaluation points in [-L,L]. If you find results output by this function
+    to be inaccurate, try adjusting these parameters. Refer to [1] for more details.
 
     Parameters:
-      target_eps - target epsilon
-      sigma - noise sigma
-      q - subsampling ratio
-      nx - number of points in the discretisation grid
-      L -  limit for the integral
-      ncomp - number of compositions
+        target_eps (float): Target epsilon
+        sigma (float): Privacy noise sigma
+        q (float): Subsampling ratio, i.e., how large are batches relative to the dataset
+        ncomp (int): Number of compositions, i.e., how many subsequent batch operations are queried
+        nx (int): Number of discretiation points
+        L (float):  Limit for the approximation of the privacy loss distribution integral
+
+    Returns:
+        (float): delta value 
+
+    References:
+        Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049  
     """
-
-
     nx = int(nx)
 
     tol_newton = 1e-10 # set this to, e.g., 0.01*target_delta
