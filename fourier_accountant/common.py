@@ -13,10 +13,9 @@ arXiv preprint arXiv:1906.03049 (2019)
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko) and
 was refactored by Lukas Prediger (@lumip) .
 '''
-
 import numpy as np
 
-def _check_args(sigma, q, ncomp, nx, L):
+def _check_args(sigma: float, q: float, ncomp: int, nx: int, L: float):
     if sigma <= 0:
         raise ValueError("sigma must be a positive number")
     if q <= 0:
@@ -27,10 +26,10 @@ def _check_args(sigma, q, ncomp, nx, L):
         raise ValueError("ncomp must be a positive whole number")
     if nx <= 0:
         raise ValueError("nx must be a positive whole number")
-    if L <=0:
+    if L <= 0:
         raise ValueError("L must be a positive number")
 
-def _evaluate_pld(relation, sigma, q, ncomp, nx, L):
+def _evaluate_pld(relation: str, sigma: float, q: float, ncomp: int, nx: int, L: float):
     """
     _INTERNAL_ Evaluates the privacy loss distribution, which is crucial
     for computation of both epsilon and delta.
@@ -55,19 +54,21 @@ def _evaluate_pld(relation, sigma, q, ncomp, nx, L):
 
     Returns:
         tuple (x, cfx, dx):
-            x (np.array(float)): discretisation points for the integral of the privacy loss distribution
+            x (np.array(float)): discretisation points for the integral of the
+                                 privacy loss distribution
             cfx (np.array(float)): evaluation values
             dx (float): discretisation step length
 
     References:
-        Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
-            https://arxiv.org/abs/1906.03049  
+        Antti Koskela, Joonas Jälkö, Antti Honkela:
+        Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049
     """
-    assert(relation == 'S' or relation == 'R') # assertion because this argument should only be used internally
+    assert(relation in ('S', 'R')) # assertion because this argument should only be used internally
     _check_args(sigma, q, ncomp, nx, L)
 
-    dx = 2.0*L/nx # discretisation interval \Delta x
-    x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
+    dx = 2.0 * L/nx # discretisation interval \Delta x
+    x = np.linspace(-L, L-dx, nx, dtype=np.complex128) # grid for the numerical integration
 
     # Evaluate the PLD distribution,
     if relation == 'R':
@@ -78,19 +79,21 @@ def _evaluate_pld(relation, sigma, q, ncomp, nx, L):
         ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
 
         ey = np.exp(x[ii+1:])
-        Linvx = (sigma**2)*np.log((ey-(1-q))/q) + 0.5
-        ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-            q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
-        dLinvx = (sigma**2)*ey/(ey-(1-q));
+        Linvx = (sigma**2) * np.log((ey - (1-q)) / q) + 0.5
+        ALinvx = (1/np.sqrt(2*np.pi*sigma**2)) * (
+                    (1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
+                    q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2))
+                )
+        dLinvx = (sigma**2)*ey/(ey-(1-q))
 
         fx = np.zeros(nx)
-        fx[ii+1:] =  np.real(ALinvx*dLinvx)
+        fx[ii+1:] = np.real(ALinvx*dLinvx)
     elif relation == 'S':
         # This is the case of substitution relation (subsection 5.2)
         c = q*np.exp(-1/(2*sigma**2))
         ey = np.exp(x)
-        term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
-        term1=np.maximum(term1,1e-16)
+        term1 = (-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
+        term1 = np.maximum(term1, 1e-16)
         Linvx = (sigma**2)*np.log(term1)
 
         sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
@@ -103,7 +106,7 @@ def _evaluate_pld(relation, sigma, q, ncomp, nx, L):
         ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
         q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
 
-        fx =  np.real(ALinvx*dLinvx)
+        fx = np.real(ALinvx*dLinvx)
 
     nx_half = int(nx/2)
 

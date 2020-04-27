@@ -19,7 +19,9 @@ from .common import _evaluate_pld
 
 __all__ = ['get_delta_R', 'get_delta_S']
 
-def _get_delta(relation, target_eps, sigma, q, ncomp, nx, L):
+def _get_delta(
+        relation: str, target_eps: float, sigma: float, q: float, ncomp: int, nx: int, L: float
+    ):
     """
     _INTERNAL_ Computes DP delta for substite or remove/add relation.
 
@@ -45,11 +47,12 @@ def _get_delta(relation, target_eps, sigma, q, ncomp, nx, L):
         L (float):  Limit for the approximation of the privacy loss distribution integral
 
     Returns:
-        (float): delta value 
+        (float): delta value
 
     References:
-        Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
-            https://arxiv.org/abs/1906.03049  
+        Antti Koskela, Joonas Jälkö, Antti Honkela:
+        Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049
     """
     if target_eps <= 0:
         raise ValueError("target_eps must be a positive number")
@@ -66,19 +69,27 @@ def _get_delta(relation, target_eps, sigma, q, ncomp, nx, L):
     # Evaluate \delta(target_eps) and \delta'(target_eps)
     exp_e = 1-np.exp(target_eps-x[jj+1:])
     integrand = exp_e*cfx[jj+1:]
-    sum_int=np.sum(integrand)
+    sum_int = np.sum(integrand)
     delta = sum_int*dx
 
     if np.isnan(delta):
-        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+        raise ValueError("Computation reached a NaN value. "\
+            "This can happen if sigma is chosen too small, please check the parameters.")
 
     return np.real(delta)
 
 
-def get_delta_R(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
+def get_delta_R(
+        target_eps: float = 1.0,
+        sigma: float = 2.0,
+        q: float = 0.01,
+        ncomp: int = int(1E4),
+        nx: int = int(1E6),
+        L: float = 20.0
+    ):
     """
     Computes the DP delta for the remove/add neighbouring relation of datasets.
-    
+
     The computed delta privacy value is for the composition of ncomp subsequent
     operations over batches Poisson-subsampled with rate q from the dataset, each
     perturbed by privacy noise sigma.
@@ -98,20 +109,28 @@ def get_delta_R(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
         L (float):  Limit for the approximation of the privacy loss distribution integral
 
     Returns:
-        (float): delta value 
+        (float): delta value
 
     References:
-        Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
-            https://arxiv.org/abs/1906.03049  
+        Antti Koskela, Joonas Jälkö, Antti Honkela:
+        Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049
     """
 
     return _get_delta('R', target_eps, sigma, q, ncomp, nx, L)
 
 
-def get_delta_S(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
+def get_delta_S(
+        target_eps: float = 1.0,
+        sigma: float = 2.0,
+        q: float = 0.01,
+        ncomp: int = int(1E4),
+        nx: int = int(1E6),
+        L: float = 20.0
+    ):
     """
     Computes the DP delta for the substitute neighbouring relation of datasets.
-    
+
     The computed delta privacy value is for the composition of ncomp subsequent
     operations over batches Poisson-subsampled with rate q from the dataset, each
     perturbed by privacy noise sigma.
@@ -131,11 +150,11 @@ def get_delta_S(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
         L (float):  Limit for the approximation of the privacy loss distribution integral
 
     Returns:
-        (float): delta value 
+        (float): delta value
 
     References:
-        Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
-            https://arxiv.org/abs/1906.03049  
+        Antti Koskela, Joonas Jälkö, Antti Honkela:
+        Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049
     """
     return _get_delta('S', target_eps, sigma, q, ncomp, nx, L)
-    

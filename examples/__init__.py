@@ -3,7 +3,7 @@
 Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 
-Test cases
+Examples
 
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
