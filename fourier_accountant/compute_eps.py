@@ -1,38 +1,26 @@
 
 '''
+Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
+
+This module holds functions for computing epsilon given delta.
+
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
 Computing Tight Differential Privacy Guarantees Using FFT.
 arXiv preprint arXiv:1906.03049 (2019)
-The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
+
+The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko) and
+was refactored by Lukas Prediger (@lumip) .
 '''
 
 import numpy as np
+from .common import _evaluate_pld
 
 __all__ = ['get_epsilon_R', 'get_epsilon_S']
 
 
-def check_args(target_delta, sigma, q, ncomp, nx, L):
-    if target_delta < 0:
-        raise ValueError("target_delta must be a positive number")
-    if target_delta > 1:
-        raise ValueError("target_delta must not exceed 1")
-    if sigma <= 0:
-        raise ValueError("sigma must be a positive number")
-    if q <= 0:
-        raise ValueError("q must be a positive number")
-    if q > 1:
-        raise ValueError("q must not exceed 1")
-    if ncomp <= 0:
-        raise ValueError("ncomp must be a positive whole number")
-    if nx <= 0:
-        raise ValueError("nx must be a positive whole number")
-    if L <=0:
-        raise ValueError("L must be a positive number")
-
-
-def _compute_eps(relation, target_delta, sigma, q, ncomp, nx, L):
+def _get_epsilon(relation, target_delta, sigma, q, ncomp, nx, L):
     """
     _INTERNAL_ Computes DP epsilon for substite or remove/add relation.
 
@@ -71,78 +59,19 @@ def _compute_eps(relation, target_delta, sigma, q, ncomp, nx, L):
         Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049  
     """
-    assert(relation == 'S' or relation == 'R')
-
-    check_args(target_delta, sigma, q, ncomp, nx, L)
-
+    if target_delta < 0:
+        raise ValueError("target_delta must be a positive number")
+    if target_delta > 1:
+        raise ValueError("target_delta must not exceed 1")
+    
     nx = int(nx)
+    ncomp = int(ncomp)
 
-    dx = 2.0*L/nx # discretisation interval \Delta x
-    x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
-
-    # Evaluate the PLD distribution
-    if relation == 'R':
-        # The case of remove/add relation (Subsection 5.1)
-
-        # first ii for which x(ii+1)>log(1-q),
-        # i.e. start of the integral domain
-        ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
-
-        ey = np.exp(x[ii+1:])
-        Linvx = (sigma**2)*np.log((np.exp(x[ii+1:])-(1-q))/q) + 0.5
-
-        ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-            q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)));
-        dLinvx = (sigma**2)*ey/(ey-(1-q));
-
-        fx = np.zeros(nx)
-        fx[ii+1:] =  np.real(ALinvx*dLinvx)
-    else:
-        # This is the case of substitution relation (subsection 5.2)
-        ii = 1
-        c = q*np.exp(-1/(2*sigma**2))
-        ey = np.exp(x[ii-1:])
-        term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
-        term1=np.maximum(term1,1e-16)
-        Linvx = (sigma**2)*np.log(term1)
-
-        sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
-        nom1 = 4*c**2*ey - 2*(1-q)**2*ey*(1-ey)
-        term1 = nom1/(2*sq)
-        nom2 = term1 + (1-q)*ey
-        nom2 = nom2*(sq+(1-q)*(1-ey))
-        dLinvx = sigma**2*nom2/(4*c**2*ey)
-
-        ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-        q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
-        fx = np.zeros(nx)
-        fx[ii-1:] =  np.real(ALinvx*dLinvx)
-
-    nx_half = int(nx/2)
-
-    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-    temp = np.copy(fx[nx_half:])
-    fx[nx_half:] = np.copy(fx[:nx_half])
-    fx[:nx_half] = temp
-
-    FF1 = np.fft.fft(fx*dx) # Compute the DFFT
-
-    FF1_transformed = FF1**ncomp
-    if np.any(np.isinf(FF1_transformed)):
-        raise ValueError("Computation reached an infinite value. This can happen if sigma is chosen too small, please check the parameters.")
-
-    FF1_transformed /= dx
-
-    # Compute the inverse DFT
-    cfx = np.fft.ifft(FF1_transformed)
-
-    # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
-    temp = np.copy(cfx[nx_half:])
-    cfx[nx_half:] = cfx[:nx_half]
-    cfx[:nx_half] = temp
+    x, cfx, dx = _evaluate_pld(relation, sigma, q, ncomp, nx, L)    
 
     #Initial value \epsilon_0
     eps_0 = 0
+    # todo (lumip): do these need to be different?
     tol_newton = 1e-10 if relation == 'S' else 1e-13 # set this to small enough, e.g., 0.01*target_delta
     while True: # newton iteration to find epsilon for target delta
 
@@ -163,7 +92,8 @@ def _compute_eps(relation, target_delta, sigma, q, ncomp, nx, L):
         derivative = sum_int2*dx
 
         if np.isnan(delta_temp):
-            raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+            raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small,"\
+                " please check the parameters.")
 
         # Here tol is the stopping criterion for Newton's iteration
         # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
@@ -218,7 +148,7 @@ def get_epsilon_R(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.
         Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049  
     """
-    return _compute_eps('R', target_delta, sigma, q, ncomp, nx, L)
+    return _get_epsilon('R', target_delta, sigma, q, ncomp, nx, L)
 
 def get_epsilon_S(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
     """
@@ -256,4 +186,4 @@ def get_epsilon_S(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.
         Antti Koskela, Joonas Jälkö, Antti Honkela: Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049  
     """
-    return _compute_eps('S', target_delta, sigma, q, ncomp, nx, L)
+    return _get_epsilon('S', target_delta, sigma, q, ncomp, nx, L)

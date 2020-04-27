@@ -2,7 +2,7 @@ import unittest
 
 from fourier_accountant import get_delta_R, get_delta_S
 
-class compute_eps_regression_tests(unittest.TestCase):
+class compute_delta_regression_tests(unittest.TestCase):
 
     def test_get_delta_R_regression_valid_params(self):
         test_data = [
