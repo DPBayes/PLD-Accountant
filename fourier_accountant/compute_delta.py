@@ -67,8 +67,6 @@ def _get_delta(relation, target_eps, sigma, q, ncomp, nx, L):
 
     nx = int(nx)
 
-    tol_newton = 1e-10 # set this to, e.g., 0.01*target_delta
-
     dx = 2.0*L/nx # discretisation interval \Delta x
     x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
 
