@@ -25,14 +25,13 @@ def check_args(target_delta, sigma, q, ncomp, nx, L):
     if q > 1:
         raise ValueError("q must not exceed 1")
     if ncomp <= 0:
-        raise ValueError("ncomp must be a positive integer")
+        raise ValueError("ncomp must be a positive whole number")
     if nx <= 0:
-        raise ValueError("nx must be a positive integer")
+        raise ValueError("nx must be a positive whole number")
     if L <=0:
         raise ValueError("L must be a positive number")
 
-
-def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
+def get_epsilon_R(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
     """
     Computes the DP epsilon for the remove/add neighbouring relation of datasets.
     
@@ -81,9 +80,6 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     # i.e. start of the integral domain
     ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
 
-    #Initial value \epsilon_0
-    eps_0 = 0
-
     # Evaluate the PLD distribution,
     # The case of remove/add relation (Subsection 5.1)
     ey = np.exp(x[ii+1:])
@@ -105,10 +101,6 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     # Compute the DFT
     FF1 = np.fft.fft(fx*dx)
 
-    # Find first jj for which 1-exp(eps_0-x)>0,
-    # i.e. start of the integral domain
-    jj = int(np.floor(float(nx*(L+eps_0)/(2*L))))
-
     # Compute the inverse DFT
     cfx = np.fft.ifft((FF1**ncomp/dx))
 
@@ -117,46 +109,40 @@ def get_epsilon_R(target_delta=1e-6,sigma=2.0,q=0.01,ncomp=1E4,nx=1E6,L=20.0):
     cfx[half:] = cfx[:half]
     cfx[:half] = temp
 
-    # Evaluate \delta(eps_0) and \delta'(eps_0)
-    dexp_e = -np.exp(eps_0-x[jj+1:])
-    exp_e = 1+dexp_e
-    integrand = exp_e*cfx[jj+1:]
-    integrand2 = dexp_e*cfx[jj+1:]
-    sum_int=np.sum(integrand)
-    sum_int2=np.sum(integrand2)
-    delta_temp = sum_int*dx
-    derivative = sum_int2*dx
 
-    if np.isnan(delta_temp):
-        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
-
-    # Here tol is the stopping criterion for Newton's iteration
-    # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
-
-    while np.abs(delta_temp - target_delta) > tol_newton:
-        #print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
-
-        # Update epsilon
-        eps_0 = eps_0 - (delta_temp - target_delta)/derivative
-
-        if(eps_0<-L or eps_0>L):
-            break
+    #Initial value \epsilon_0
+    eps_0 = 0
+    while True: # newton iteration to find epsilon for target delta
 
         # Find first kk for which 1-exp(eps_0-x)>0,
         # i.e. start of the integral domain
         kk = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
 
-        # Integrands and integral domain
+        # Numerical integrands and integral domain
         dexp_e = -np.exp(eps_0-x[kk+1:])
         exp_e = 1+dexp_e
 
         # Evaluate \delta(eps_0) and \delta'(eps_0)
         integrand = exp_e*cfx[kk+1:]
         integrand2 = dexp_e*cfx[kk+1:]
-        sum_int=np.sum(integrand)
-        sum_int2=np.sum(integrand2)
+        sum_int = np.sum(integrand)
+        sum_int2 = np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
+
+        if np.isnan(delta_temp):
+            raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+
+        # Here tol is the stopping criterion for Newton's iteration
+        # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
+        if np.abs(delta_temp - target_delta) <= tol_newton:
+            break
+
+        # Update epsilon
+        eps_0 = eps_0 - (delta_temp - target_delta)/derivative
+
+        if(eps_0<-L or eps_0>L):
+            break
 
     if(np.real(eps_0) < -L or np.real(eps_0) > L):
         raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
@@ -209,9 +195,6 @@ def get_epsilon_S(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.
     dx = 2.0*L/nx # discretisation interval \Delta x
     x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
 
-    #Initial value \epsilon_0
-    eps_0 = 0
-
     ii = 1
     # Evaluate the PLD distribution,
     # This is the case of substitution relation (subsection 5.2)
@@ -242,10 +225,6 @@ def get_epsilon_S(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.
 
     FF1 = np.fft.fft(fx*dx) # Compute the DFFT
 
-    # Find first jj for which 1-exp(eps_0-x)>0,
-    # i.e. start of the integral domain
-    jj = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
-
     FF1_transformed = FF1**ncomp
     if np.any(np.isinf(FF1_transformed)):
         raise ValueError("Computation reached an infinite value. This can happen if sigma is chosen too small, please check the parameters.")
@@ -260,30 +239,9 @@ def get_epsilon_S(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.
     cfx[half:] = cfx[:half]
     cfx[:half] = temp
 
-    # Evaluate \delta(eps_0) and \delta'(eps_0)
-    dexp_e = -np.exp(eps_0-x[jj+1:])
-    exp_e = 1+dexp_e
-    integrand = exp_e*cfx[jj+1:]
-    integrand2 = dexp_e*cfx[jj+1:]
-    sum_int=np.sum(integrand)
-    sum_int2=np.sum(integrand2)
-    delta_temp = sum_int*dx
-    derivative = sum_int2*dx
-
-    if np.isnan(delta_temp):
-        raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
-
-    # Here tol is the stopping criterion for Newton's iteration
-    # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
-    while np.abs(delta_temp - target_delta) > tol_newton:
-
-        #print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
-
-        # Update epsilon
-        eps_0 = eps_0 - (delta_temp - target_delta)/derivative
-
-        if(eps_0<-L or eps_0>L):
-            break
+    #Initial value \epsilon_0
+    eps_0 = 0
+    while True: # newton iteration to find epsilon for target delta
 
         # Find first kk for which 1-exp(eps_0-x)>0,
         # i.e. start of the integral domain
@@ -296,10 +254,24 @@ def get_epsilon_S(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.
         # Evaluate \delta(eps_0) and \delta'(eps_0)
         integrand = exp_e*cfx[kk+1:]
         integrand2 = dexp_e*cfx[kk+1:]
-        sum_int=np.sum(integrand)
-        sum_int2=np.sum(integrand2)
+        sum_int = np.sum(integrand)
+        sum_int2 = np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
+
+        if np.isnan(delta_temp):
+            raise ValueError("Computation reached a NaN value. This can happen if sigma is chosen too small, please check the parameters.")
+
+        # Here tol is the stopping criterion for Newton's iteration
+        # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
+        if np.abs(delta_temp - target_delta) <= tol_newton:
+            break
+
+        # Update epsilon
+        eps_0 = eps_0 - (delta_temp - target_delta)/derivative
+
+        if(eps_0<-L or eps_0>L):
+            break
 
     if(np.real(eps_0) < -L or np.real(eps_0) > L):
         raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
