@@ -39,3 +39,7 @@ class compute_eps_regression_tests(unittest.TestCase):
     def test_get_delta_S_instability_exceptions(self):
         with self.assertRaises(ValueError):
             get_delta_S(target_eps=1.0, sigma=.1, q=0.1, ncomp=1E4, nx=1E6, L=5.0) 
+
+
+if __name__ == '__main__':
+    unittest.main()
