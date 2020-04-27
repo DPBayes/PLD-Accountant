@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fourier_accountant",
-    version="0.11",
+    version="0.12.0-dev",
     author="Antti Koskela",
     author_email="anttik123@gmail.com",
     description="Fourier Accountant for Differential Privacy ",
