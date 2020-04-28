@@ -1,17 +1,19 @@
-# Fourier Accountant
 
-Python code for computing tight DP-guarantees for the subsampled Gaussian mechanism.
+'''
+Fourier Accountant
+Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 
-The method is described in:
+Simple example of how the functions in the package are used
 
-Antti Koskela, Joonas Jälkö, Antti Honkela:
-Computing Tight Differential Privacy Guarantees Using FFT
+The method is described in
+A.Koskela, J.Jälkö and A.Honkela:
+Computing Tight Differential Privacy Guarantees Using FFT.
+arXiv preprint arXiv:1906.03049 (2019)
 
-https://arxiv.org/abs/1906.03049
+The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko) and
+was refactored by Lukas Prediger (@lumip) .
+'''
 
-# Usage
-
-```python
 import fourier_accountant
 
 ncomp = 1000  # number of compositions of DP queries over minibatches
@@ -27,4 +29,3 @@ print(delta)
 eps = fourier_accountant.get_epsilon_S(target_delta=1e-5, sigma=sigma, q=q, ncomp=ncomp)
 print(eps)
 # 1.9931200626285734
-```
