@@ -1,0 +1,7 @@
+# pending changes
+    - none
+
+# 0.12.0
+    - first public release as `fourier_accountant` package
+    - code cleanup and rename from paper version, initially released as `pld_accountant`
+

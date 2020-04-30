@@ -3,3 +3,5 @@
 *.eggs*
 .vscode*
 *.mypy_cache*
+dist/*
+build/*
