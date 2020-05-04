@@ -35,6 +35,7 @@ def _get_epsilon(
     Due to numerical instabilities, corner cases exist where this function sometimes returns
     inaccurate values. If you think this is occuring, increasing nx and verifying that
     the returned value does not change by much is usually a good heuristic to verify the output.
+
     Parameters:
         relation (str): Which relation to consider: _R_emove/add or _S_ubstitute
         target_delta (float): Target delta
@@ -120,6 +121,7 @@ def get_epsilon_R(
     Due to numerical instabilities, corner cases exist where this function sometimes returns
     inaccurate values. If you think this is occuring, increasing nx and verifying that
     the returned value does not change by much is usually a good heuristic to verify the output.
+
     Parameters:
         target_delta (float): Target delta
         sigma (float): Privacy noise sigma
@@ -136,6 +138,7 @@ def get_epsilon_R(
             https://arxiv.org/abs/1906.03049
     """
     return _get_epsilon('R', target_delta, sigma, q, ncomp, nx, L)
+
 def get_epsilon_S(
         target_delta: float = 1e-6,
         sigma: float = 2.0,
@@ -161,6 +164,7 @@ def get_epsilon_S(
     Due to numerical instabilities, corner cases exist where this function sometimes returns
     inaccurate values. If you think this is occuring, increasing nx and verifying that
     the returned value does not change by much is usually a good heuristic to verify the output.
+
     Parameters:
         target_delta (float): Target delta
         sigma (float): Privacy noise sigma
