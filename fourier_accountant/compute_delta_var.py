@@ -19,7 +19,7 @@ import numpy as np
 
 
 
-def get_delta_R(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
+def get_delta_R(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
 
     """
     This function returns the delta as a function of epsilon,
@@ -79,7 +79,7 @@ def get_delta_R(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
         # Compute the DFT
         FF1 = np.fft.fft(fx*dx)
-        F_prod = F_prod*FF1
+        F_prod = F_prod*FF1**k[ij]
 
     # first jj for which 1-exp(target_eps-x)>0,
     # i.e. start of the integral domain
@@ -107,7 +107,7 @@ def get_delta_R(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
 
 
 
-def get_delta_S(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
+def get_delta_S(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
 
     """
     This function returns the delta as a function of epsilon,
@@ -172,7 +172,7 @@ def get_delta_S(sigma_t,q_t,target_eps=1.0,nx=1E6,L=20.0):
         fx[:half] = temp
 
         FF1 = np.fft.fft(fx*dx) # Compute the DFFT
-        F_prod = F_prod*FF1
+        F_prod = F_prod*FF1**k[ij]
 
     # first jj for which 1-exp(target_eps-x)>0,
     # i.e. start of the integral domain

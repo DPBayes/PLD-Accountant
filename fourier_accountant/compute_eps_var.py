@@ -20,7 +20,7 @@ import numpy as np
 
 
 
-def get_eps_R(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
+def get_eps_R(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
 
     """
     This function returns the epsilon as a function of delta,
@@ -82,7 +82,7 @@ def get_eps_R(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
 
         # Compute the DFT
         FF1 = np.fft.fft(fx*dx)
-        F_prod = F_prod*FF1
+        F_prod = F_prod*FF1**k[ij]
 
     #Initial value \epsilon_0
     eps_0 = 0
@@ -150,7 +150,7 @@ def get_eps_R(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
 
 
 
-def get_eps_S(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
+def get_eps_S(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
 
     """
     This function returns the epsilon as a function of delta,
@@ -220,7 +220,7 @@ def get_eps_S(sigma_t,q_t,target_delta=1e-6,nx=1E6,L=20.0):
         fx[:half] = temp
 
         FF1 = np.fft.fft(fx*dx) # Compute the DFFT
-        F_prod = F_prod*FF1
+        F_prod = F_prod*FF1**k[ij]
 
     # Compute the inverse DFT
     cfx = np.fft.ifft((F_prod/dx))

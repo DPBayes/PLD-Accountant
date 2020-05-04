@@ -45,19 +45,21 @@ e2  = compute_eps.get_epsilon_S(q=q,sigma=sigma,target_delta=delta,L=L,nx=nx,nco
 
 L=20
 nx=2E6
-nc=20
-sigmas=np.linspace(1.2,2.2,nc)
-q_values=np.linspace(0.05,0.07,nc)
+nc=10
+sigmas=np.linspace(1.6,1.8,nc)
+q_values=np.linspace(0.05,0.06,nc)
+k=10*np.ones(nc) #number of compositions for each value of (q,sigma)
+
 
 eps=1.5
 
-d1  = compute_delta_var.get_delta_R(q_t=q_values,sigma_t=sigmas,target_eps=eps,L=L,nx=nx)
-d2  = compute_delta_var.get_delta_S(q_t=q_values,sigma_t=sigmas,target_eps=eps,L=L,nx=nx)
+d1  = compute_delta_var.get_delta_R(q_t=q_values,sigma_t=sigmas,k=k,target_eps=eps,L=L,nx=nx)
+d2  = compute_delta_var.get_delta_S(q_t=q_values,sigma_t=sigmas,k=k,target_eps=eps,L=L,nx=nx)
 
 delta=1e-6
 
-e1 = compute_eps_var.get_eps_R(q_t=q_values,sigma_t=sigmas,target_delta=delta,L=L,nx=nx)
-e2 = compute_eps_var.get_eps_S(q_t=q_values,sigma_t=sigmas,target_delta=delta,L=L,nx=nx)
+e1 = compute_eps_var.get_eps_R(q_t=q_values,sigma_t=sigmas,k=k,target_delta=delta,L=L,nx=nx)
+e2 = compute_eps_var.get_eps_S(q_t=q_values,sigma_t=sigmas,k=k,target_delta=delta,L=L,nx=nx)
 
 
 
