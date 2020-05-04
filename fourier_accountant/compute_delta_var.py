@@ -19,21 +19,47 @@ import numpy as np
 
 
 
-def get_delta_R(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
-
+def get_delta_R(
+        sigma_t: np.ndarray,
+        q_t: np.ndarray,
+        k: np.ndarray,
+        target_eps: float = 1.0,
+        nx: int = 1E6,
+        L: int = 20.0
+    ):
     """
-    This function returns the delta as a function of epsilon,
-    for the case of Poisson subsampling with the remove/add neighbouring relation of datasets.
-    The function computes delta for varying parameters sigma and q,
-    the input given as an array of parameters.
+    Computes the DP delta for the remove/add neighbouring relation of datasets.
+
+    The computed delta privacy value is for the composition of DP operations
+    as specified by `sigma_t`, `q_t` and `k`, where `sigma_t` and `q_t` specify
+    privacy noise and subsampling ratio for each operation and `k` is the number
+    of repetitions, i.e.,
+    - `k[0]` operations with privacy noise `sigma_t[0]` and subsampling ratio `q_t[0]`
+    - `k[1]` operations with privacy noise `sigma_t[1]` and subsampling ratio `q_t[1]`
+    - etc
+    for a total of `np.sum(k)` operations.
+
+    Note that this function relies on numerical approximations, which are influenced
+    by choice of parameters nx and L. Increasing L roughly increases the range over
+    which the integral of the privacy loss distribution is approximated, while nx is
+    the number of evaluation points in [-L,L]. If you find results output by this function
+    to be inaccurate, try adjusting these parameters. Refer to [1] for more details.
 
     Parameters:
-      target_eps - target epsilon
-      sigma_t - array of sigmas
-      q_t - array of subsampling ratios
-      nx - number of points in the discretisation grid
-      L -  limit for the integral
-      ncomp - number of compositions
+        sigma_t (np.ndarray(float)): Privacy noise sigma for composed DP operations
+        q_t (np.ndarray(float)): Subsampling ratios, i.e., how large are batches relative to the dataset
+        k (np.ndarray(int)): Repetitions for each values in `sigma_t` and `q_t`
+        target_eps (float): Target epsilon
+        nx (int): Number of discretiation points
+        L (float):  Limit for the approximation of the privacy loss distribution integral
+
+    Returns:
+        (float): delta value
+
+    References:
+        Antti Koskela, Joonas Jälkö, Antti Honkela:
+        Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049
     """
 
     nx = int(nx)
@@ -46,11 +72,10 @@ def get_delta_R(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
     fx_table=[]
     F_prod=np.ones(x.size)
 
-    ncomp=sigma_t.size
+    ncomp = sigma_t.size
 
-    if(q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
-        return float('inf')
+    if(q_t.size != ncomp) or (k.size != ncomp):
+        raise ValueError('Arrays provided for sigma_t, q_t and k must all be of the same size')
 
     for ij in range(ncomp):
 
@@ -99,31 +124,54 @@ def get_delta_R(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
     sum_int=np.sum(integrand)
     delta = sum_int*dx
 
-    print('DP-delta (in R-relation) after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
-
     return np.real(delta)
 
 
 
 
 
-def get_delta_S(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
-
+def get_delta_S(
+        sigma_t: np.ndarray,
+        q_t: np.ndarray,
+        k: np.ndarray,
+        target_eps: float = 1.0,
+        nx: int = 1E6,
+        L: int = 20.0
+    ):
     """
-    This function returns the delta as a function of epsilon,
-    for the case of Poisson subsampling with the substitute relation of datasets.
-    The function computes delta for varying parameters sigma and q,
-    the input given as an array of parameters.
+    Computes the DP delta for the substitute neighbouring relation of datasets.
+
+    The computed delta privacy value is for the composition of DP operations
+    as specified by `sigma_t`, `q_t` and `k`, where `sigma_t` and `q_t` specify
+    privacy noise and subsampling ratio for each operation and `k` is the number
+    of repetitions, i.e.,
+    - `k[0]` operations with privacy noise `sigma_t[0]` and subsampling ratio `q_t[0]`
+    - `k[1]` operations with privacy noise `sigma_t[1]` and subsampling ratio `q_t[1]`
+    - etc
+    for a total of `np.sum(k)` operations.
+
+    Note that this function relies on numerical approximations, which are influenced
+    by choice of parameters nx and L. Increasing L roughly increases the range over
+    which the integral of the privacy loss distribution is approximated, while nx is
+    the number of evaluation points in [-L,L]. If you find results output by this function
+    to be inaccurate, try adjusting these parameters. Refer to [1] for more details.
 
     Parameters:
-      target_eps - target epsilon
-      sigma_t - array of sigmas
-      q_t - array of subsampling ratios
-      nx - number of points in the discretisation grid
-      L -  limit for the integral
-      ncomp - number of compositions
-    """
+        sigma_t (np.ndarray(float)): Privacy noise sigma for composed DP operations
+        q_t (np.ndarray(float)): Subsampling ratios, i.e., how large are batches relative to the dataset
+        k (np.ndarray(int)): Repetitions for each values in `sigma_t` and `q_t`
+        target_eps (float): Target epsilon
+        nx (int): Number of discretiation points
+        L (float):  Limit for the approximation of the privacy loss distribution integral
 
+    Returns:
+        (float): delta value
+
+    References:
+        Antti Koskela, Joonas Jälkö, Antti Honkela:
+        Computing Tight Differential Privacy Guarantees Using FFT
+            https://arxiv.org/abs/1906.03049
+    """
     nx = int(nx)
 
     tol_newton = 1e-10 # set this to, e.g., 0.01*target_delta
@@ -136,9 +184,8 @@ def get_delta_S(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
 
     ncomp=sigma_t.size
 
-    if(q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
-        return float('inf')
+    if(q_t.size != ncomp) or (k.size != ncomp):
+        raise ValueError('Arrays provided for sigma_t, q_t and k must all be of the same size')
 
     for ij in range(ncomp):
 
@@ -192,6 +239,4 @@ def get_delta_S(sigma_t,q_t,k,target_eps=1.0,nx=1E6,L=20.0):
     sum_int=np.sum(integrand)
     delta = sum_int*dx
 
-
-    print('DP-delta (in S-relation) after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
     return np.real(delta)
