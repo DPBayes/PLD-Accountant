@@ -10,7 +10,8 @@ The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
 Computing Tight Differential Privacy Guarantees Using FFT.
 arXiv preprint arXiv:1906.03049 (2019)
-The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
+The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko) and
+was refactored by Lukas Prediger (@lumip) .
 '''
 
 
@@ -18,9 +19,7 @@ The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko)
 
 import numpy as np
 
-
-
-def get_eps_R(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
+def get_epsilon_R(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
 
     """
     This function returns the epsilon as a function of delta,
@@ -50,9 +49,8 @@ def get_eps_R(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
 
     ncomp=sigma_t.size
 
-    if(q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
-        return float('inf')
+    if(q_t.size != ncomp) or (k.size != ncomp):
+        raise ValueError('Arrays provided for sigma_t, q_t and k must all be of the same size')
 
     for ij in range(ncomp):
 
@@ -109,12 +107,13 @@ def get_eps_R(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
     sum_int2=np.sum(integrand2)
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
+    if np.isnan(delta_temp):
+        raise ValueError("Computation reached a NaN value. "\
+            "This can happen if sigma is chosen too small, please check the parameters.")
 
     # Here tol is the stopping criterion for Newton's iteration
     # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
     while np.abs(delta_temp - target_delta) > tol_newton:
-
-        #print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
 
         # Update epsilon
         eps_0 = eps_0 - (delta_temp - target_delta)/derivative
@@ -137,20 +136,22 @@ def get_eps_R(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
         sum_int2=np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
+        if np.isnan(delta_temp):
+            raise ValueError("Computation reached a NaN value. "\
+                "This can happen if sigma is chosen too small, please check the parameters.")
 
-    if(np.real(eps_0) < -L or np.real(eps_0) > L):
-        print('Error: epsilon out of [-L,L] window, please check the parameters.')
-        return float('inf')
+    eps_0 = np.real(eps_0)
+    if eps_0 < -L or eps_0 > L:
+        raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
     else:
-        print('DP-epsilon (in R-relation) after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
-        return np.real(eps_0)
+        return eps_0
 
 
 
 
 
 
-def get_eps_S(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
+def get_epsilon_S(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
 
     """
     This function returns the epsilon as a function of delta,
@@ -183,9 +184,8 @@ def get_eps_S(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
 
     ncomp=sigma_t.size
 
-    if(q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
-        return float('inf')
+    if(q_t.size != ncomp) or (k.size != ncomp):
+        raise ValueError('Arrays provided for sigma_t, q_t and k must all be of the same size')
 
     for ij in range(ncomp):
 
@@ -244,11 +244,13 @@ def get_eps_S(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
     delta_temp = sum_int*dx
     derivative = sum_int2*dx
 
+    if np.isnan(delta_temp):
+        raise ValueError("Computation reached a NaN value. "\
+            "This can happen if sigma is chosen too small, please check the parameters.")
+
     # Here tol is the stopping criterion for Newton's iteration
     # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
     while np.abs(delta_temp - target_delta) > tol_newton:
-
-        # print('Residual of the Newton iteration: ' + str(np.abs(delta_temp - target_delta)))
 
         # Update epsilon
         eps_0 = eps_0 - (delta_temp - target_delta)/derivative
@@ -271,13 +273,13 @@ def get_eps_S(sigma_t,q_t,k,target_delta=1e-6,nx=1E6,L=20.0):
         sum_int2=np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
+        if np.isnan(delta_temp):
+            raise ValueError("Computation reached a NaN value. "\
+                "This can happen if sigma is chosen too small, please check the parameters.")
 
-    if(np.real(eps_0) < -L or np.real(eps_0) > L):
-        print('Error: epsilon out of [-L,L] window, please check the parameters.')
-        return float('inf')
+
+    eps_0 = np.real(eps_0)
+    if eps_0 < -L or eps_0 > L:
+        raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
     else:
-        print('DP-epsilon (in S-relation) after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
-        return np.real(eps_0)
-    #
-    # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
-    # return np.real(eps_0)
+        return eps_0
