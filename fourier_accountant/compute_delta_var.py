@@ -26,7 +26,6 @@ def _get_delta(
     dx = 2.0*L/nx # discretisation interval \Delta x
     x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
 
-    fx_table=[]
     F_prod=np.ones(x.size)
 
     ncomp = sigma_t.size
@@ -137,7 +136,7 @@ def get_delta_R(
         q_t (np.ndarray(float)): Subsampling ratios, i.e., how large are batches relative to the dataset
         k (np.ndarray(int)): Repetitions for each values in `sigma_t` and `q_t`
         target_eps (float): Target epsilon
-        nx (int): Number of discretiation points
+        nx (int): Number of discretisation points
         L (float):  Limit for the approximation of the privacy loss distribution integral
 
     Returns:
@@ -182,7 +181,7 @@ def get_delta_S(
         q_t (np.ndarray(float)): Subsampling ratios, i.e., how large are batches relative to the dataset
         k (np.ndarray(int)): Repetitions for each values in `sigma_t` and `q_t`
         target_eps (float): Target epsilon
-        nx (int): Number of discretiation points
+        nx (int): Number of discretisation points
         L (float):  Limit for the approximation of the privacy loss distribution integral
 
     Returns:
