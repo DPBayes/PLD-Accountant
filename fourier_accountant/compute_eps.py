@@ -2,16 +2,21 @@
 '''
 Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
+
 This module holds functions for computing epsilon given delta.
+
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
 Computing Tight Differential Privacy Guarantees Using FFT.
 arXiv preprint arXiv:1906.03049 (2019)
+
 The code is due to Antti Koskela (@koskeant) and Joonas Jälkö (@jjalko) and
 was refactored by Lukas Prediger (@lumip) .
 '''
+
 import numpy as np
 from .common import _evaluate_pld
+
 __all__ = ['get_epsilon_R', 'get_epsilon_S']
 
 def _get_epsilon(
@@ -59,11 +64,12 @@ def _get_epsilon(
 
     nx = int(nx)
     ncomp = int(ncomp)
+
     x, cfx, dx = _evaluate_pld(relation, sigma, q, ncomp, nx, L)
 
     #Initial value \epsilon_0
     eps_0 = 0
-    # set this to small enough, e.g., 0.01*target_delta
+    # set tol_newton to small enough, e.g., 0.01*target_delta
     tol_newton = 1e-10 if relation == 'S' else 1e-13 # todo (lumip): do these need to be different?
     while True: # newton iteration to find epsilon for target delta
         # Find first kk for which 1-exp(eps_0-x)>0,

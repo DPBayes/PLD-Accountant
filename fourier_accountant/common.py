@@ -38,12 +38,6 @@ def _evaluate_pld(relation: str, sigma: float, q: float, ncomp: int, nx: int, L:
     operations over batches Poisson-subsampled with rate q from the dataset, each
     perturbed by privacy noise sigma.
 
-    Note that this function relies on numerical approximations, which are influenced
-    by choice of parameters nx and L. Increasing L roughly increases the range over
-    which the integral of the privacy loss distribution is approximated, while nx is
-    the number of evaluation points in [-L,L]. If you find results output by this function
-    to be inaccurate, try adjusting these parameters. Refer to [1] for more details.
-
     Parameters:
         relation (str): Which relation to consider: _R_emove/add or _S_ubstitute
         sigma (float): Privacy noise sigma
