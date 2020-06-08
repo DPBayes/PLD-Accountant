@@ -72,30 +72,37 @@ def _get_epsilon(
     # set tol_newton to small enough, e.g., 0.01*target_delta
     tol_newton = 1e-10 if relation == 'S' else 1e-13 # todo (lumip): do these need to be different?
     while True: # newton iteration to find epsilon for target delta
-        # Find first kk for which 1-exp(eps_0-x)>0,
+
+        # Find first jj for which 1-exp(eps_0-x)>0,
         # i.e. start of the integral domain
-        kk = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
+        jj = int(np.floor(float(nx*(L+np.real(eps_0))/(2*L))))
+
         # Numerical integrands and integral domain
-        dexp_e = -np.exp(eps_0-x[kk+1:])
+        dexp_e = -np.exp(eps_0-x[jj+1:])
         exp_e = 1+dexp_e
+
         # Evaluate \delta(eps_0) and \delta'(eps_0)
-        integrand = exp_e*cfx[kk+1:]
-        integrand2 = dexp_e*cfx[kk+1:]
+        integrand = exp_e*cfx[jj+1:]
+        integrand2 = dexp_e*cfx[jj+1:]
         sum_int = np.sum(integrand)
         sum_int2 = np.sum(integrand2)
         delta_temp = sum_int*dx
         derivative = sum_int2*dx
+
         if np.isnan(delta_temp):
             raise ValueError("Computation reached a NaN value. "\
                 "This can happen if sigma is chosen too small, please check the parameters.")
+
         # Here tol is the stopping criterion for Newton's iteration
         # e.g., 0.1*delta value or 0.01*delta value (relative error small enough)
         if np.abs(delta_temp - target_delta) <= tol_newton:
             break
+
         # Update epsilon
         eps_0 = eps_0 - (delta_temp - target_delta)/derivative
         if eps_0 < -L or eps_0 > L:
             break
+
     eps_0 = np.real(eps_0)
     if eps_0 < -L or eps_0 > L:
         raise ValueError("Epsilon out of [-L,L] window, please check the parameters.")
