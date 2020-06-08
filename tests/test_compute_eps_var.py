@@ -27,7 +27,7 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         nc = 10
         sigmas = np.linspace(1.6, 1.8, nc)
         q_values = np.linspace(0.05, 0.06, nc)
-        ks = 10 * np.ones(nc) #number of compositions for each value of (q,sigma)
+        ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         test_data = [
             (dict(sigma_t=sigmas, q_t=q_values, k=ks, target_delta=1e-3, nx=1E6, L=20.0), 0.9658229984720059),
@@ -43,20 +43,19 @@ class compute_epsilon_regression_tests(unittest.TestCase):
 
     def test_get_epsilon_R_invalid_sizes(self):
         with self.assertRaises(ValueError):
-            get_epsilon_R(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1))
-            get_epsilon_R(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2))
-            get_epsilon_R(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2))
+            get_epsilon_R(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1, dtype=np.int32))
+            get_epsilon_R(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2, dtype=np.int32))
+            get_epsilon_R(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2, dtype=np.int32))
 
 
     def test_get_epsilon_R_exceptions(self):
         """ Tests that get_epsilon_R raises errors when encountering instabilities."""
         nc = 10
-        ks = 10 * np.ones(nc) #number of compositions for each value of (q,sigma)
+        ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         with self.assertRaises(ValueError):
             get_epsilon_R(sigma_t = np.linspace(0.45, 0.55, nc), q_t = np.linspace(0.01, 0.02, nc), k = ks, target_delta=1e-6, nx=1E6, L=5.0)
             get_epsilon_R(sigma_t = np.linspace(0.0005, 0.0015, nc), q_t = np.linspace(0.15, 0.25, nc), k = ks, target_delta=1e-4, nx=1E6, L=40.0)
-
 
 
     def test_get_epsilon_S_regression_valid_params(self):
@@ -64,7 +63,7 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         nc = 10
         sigmas = np.linspace(1.6, 1.8, nc)
         q_values = np.linspace(0.05, 0.06, nc)
-        ks = 10 * np.ones(nc) #number of compositions for each value of (q,sigma)
+        ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         test_data = [
             (dict(sigma_t=sigmas, q_t=q_values, k=ks, target_delta=1e-3, nx=1E6, L=20.0), 1.849343750228688),
@@ -79,15 +78,15 @@ class compute_epsilon_regression_tests(unittest.TestCase):
 
     def test_get_epsilon_S_invalid_sizes(self):
         with self.assertRaises(ValueError):
-            get_epsilon_S(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1))
-            get_epsilon_S(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2))
-            get_epsilon_S(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2))
+            get_epsilon_S(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1, dtype=np.int32))
+            get_epsilon_S(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2, dtype=np.int32))
+            get_epsilon_S(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2, dtype=np.int32))
 
 
     def test_get_epsilon_S_exceptions(self):
         """ Tests that get_epsilon_S raises errors when encountering instabilities."""
         nc = 10
-        ks = 10 * np.ones(nc) #number of compositions for each value of (q,sigma)
+        ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         with self.assertRaises(ValueError):
             get_epsilon_S(sigma_t = np.linspace(0.45, 0.55, nc), q_t = np.linspace(0.01, 0.02, nc), k = ks, target_delta=1e-6, nx=1E6, L=5.0)

@@ -2,7 +2,7 @@
 Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 
-This module holds common code for all computations for variable sigma and q.
+This module holds common code to evaluate the privacy loss distribution for all computations.
 
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
@@ -28,6 +28,8 @@ def _check_args(
         raise ValueError("all q must be positive numbers")
     if np.any(q_t > 1):
         raise ValueError("no q may exceed 1")
+    if (not np.issubdtype(k.dtype, np.integer)):
+        raise ValueError("all k must be of integer dtype")
     if np.any(k <= 0):
         raise ValueError("all k must be positive whole numbers")
     if nx <= 0:
@@ -94,7 +96,7 @@ def _evaluate_pld(
 
         sigma = sigma_t[ij]
         q = q_t[ij]
-        ncomp = k[ij]
+        ncomp = int(k[ij])
 
         # Evaluate the PLD distribution,
         if relation == 'R':
@@ -131,8 +133,10 @@ def _evaluate_pld(
             nom2 = nom2*(sq+(1-q)*(1-ey))
             dLinvx = sigma**2*nom2/(4*c**2*ey)
 
-            ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-                q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
+            ALinvx = (1/np.sqrt(2*np.pi*sigma**2)) * (
+                    (1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
+                    q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2))
+                )
 
             fx = np.real(ALinvx*dLinvx)
 

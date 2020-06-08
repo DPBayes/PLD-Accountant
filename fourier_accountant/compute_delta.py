@@ -15,7 +15,7 @@ was refactored by Lukas Prediger (@lumip) .
 '''
 
 import numpy as np
-from .common import _evaluate_pld
+from .common_var import _evaluate_pld
 
 __all__ = ['get_delta_R', 'get_delta_S']
 
@@ -60,7 +60,9 @@ def _get_delta(
     nx = int(nx)
     ncomp = int(ncomp)
 
-    x, cfx, dx = _evaluate_pld(relation, sigma, q, ncomp, nx, L)
+    x, cfx, dx = _evaluate_pld(
+        relation, np.array([sigma]), np.array([q]), np.array([ncomp]), nx, L
+    )
 
     # first jj for which 1-exp(target_eps-x)>0,
     # i.e. start of the integral domain
