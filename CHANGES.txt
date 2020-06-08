@@ -1,5 +1,6 @@
 # pending changes
     - README: brief API description added
+    - reinstated support for eps,delta computations with time-varying parameters (docs, tests, code quality)
 
 # 0.12.0
     - first public release as `fourier_accountant` package

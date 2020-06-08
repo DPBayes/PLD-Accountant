@@ -3,7 +3,7 @@
 Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 
-Tests for delta computation
+Tests for epsilon computation with constant sigma and q
 
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
@@ -26,10 +26,10 @@ class compute_eps_regression_tests(unittest.TestCase):
             (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  2.446734047007243),
             (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=40.0),  2.446733916332568),
             (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E5, L=20.0),  2.4467323179602007),
-            (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E5, nx=1E6, L=20.0),  8.984849344733961),
+            (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E5, nx=1E6, L=20.0),  8.984848512304165),
             (dict(target_delta=1e-5, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  2.162704603256141),
-            (dict(target_delta=1e-6, sigma=1.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  6.907425145306444),
-            (dict(target_delta=1e-6, sigma=1.0, q=0.02, ncomp=1E4, nx=1E6, L=20.0), 15.641357490679466),
+            (dict(target_delta=1e-6, sigma=1.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  6.907422808389587),
+            (dict(target_delta=1e-6, sigma=1.0, q=0.02, ncomp=1E4, nx=1E6, L=20.0), 15.64135722007042),
         ]
 
         for params, expected in test_data:
