@@ -54,11 +54,11 @@ def _get_epsilon(
 
     Parameters:
         relation (str): Which relation to consider: _R_emove/add or _S_ubstitute
+        sigma_t (np.ndarray(float)): Privacy noise sigma for composed DP operations
+        q_t (np.ndarray(float)): Subsampling ratios, i.e., how large are batches relative to the dataset
+        k (np.ndarray(int)): Repetitions for each values in `sigma_t` and `q_t`
         target_delta (float): Target delta
-        sigma (float): Privacy noise sigma
-        q (float): Subsampling ratio, i.e., how large are batches relative to the dataset
-        ncomp (int): Number of compositions, i.e., how many subsequent batch operations are queried
-        nx (int): Number of discretiation points
+        nx (int): Number of discretisation points
         L (float):  Limit for the approximation of the privacy loss distribution integral
     Returns:
         (float): epsilon value
