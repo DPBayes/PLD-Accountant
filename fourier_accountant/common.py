@@ -58,8 +58,8 @@ def _evaluate_pld(relation: str, sigma: float, q: float, ncomp: int, nx: int, L:
         Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049
     """
-    assert(relation in ('S', 'R')) # assertion because this argument should only be used internally
     _check_args(sigma, q, ncomp, nx, L)
+    assert(relation in ('S', 'R')) # assertion because this argument should only be used internally
 
     dx = 2.0 * L/nx # discretisation interval \Delta x
     x = np.linspace(-L, L-dx, nx, dtype=np.complex128) # grid for the numerical integration
@@ -78,10 +78,11 @@ def _evaluate_pld(relation: str, sigma: float, q: float, ncomp: int, nx: int, L:
                     (1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
                     q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2))
                 )
-        dLinvx = (sigma**2)*ey/(ey-(1-q))
+        dLinvx = (sigma**2) / (1 - (1-q)/ey)
 
         fx = np.zeros(nx)
         fx[ii+1:] = np.real(ALinvx*dLinvx)
+
     elif relation == 'S':
         # This is the case of substitution relation (subsection 5.2)
         c = q*np.exp(-1/(2*sigma**2))
@@ -102,24 +103,23 @@ def _evaluate_pld(relation: str, sigma: float, q: float, ncomp: int, nx: int, L:
 
         fx = np.real(ALinvx*dLinvx)
 
-    nx_half = int(nx/2)
+    nx_half = nx // 2
 
     # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
     temp = np.copy(fx[nx_half:])
     fx[nx_half:] = np.copy(fx[:nx_half])
     fx[:nx_half] = temp
 
-    FF1 = np.fft.fft(fx*dx) # Compute the DFFT
+    FF1 = np.fft.fft(fx * dx) # Compute the DFFT
 
     FF1_transformed = FF1**ncomp
     if np.any(np.isinf(FF1_transformed)):
         raise ValueError("Computation reached an infinite value. This can happen if sigma is "\
             "chosen too small, please check the parameters.")
 
-    FF1_transformed /= dx
 
     # Compute the inverse DFT
-    cfx = np.fft.ifft(FF1_transformed)
+    cfx = np.fft.ifft(FF1_transformed/dx)
 
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     temp = np.copy(cfx[nx_half:])

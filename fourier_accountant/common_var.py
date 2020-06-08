@@ -58,10 +58,11 @@ def _evaluate_pld(
 
     Parameters:
         relation (str): Which relation to consider: _R_emove/add or _S_ubstitute
-        sigma (float): Privacy noise sigma
-        q (float): Subsampling ratio, i.e., how large are batches relative to the dataset
-        ncomp (int): Number of compositions, i.e., how many subsequent batch operations are queried
-        nx (int): Number of discretiation points
+        sigma_t (np.ndarray(float)): Privacy noise sigma for composed DP operations
+        q_t (np.ndarray(float)): Subsampling ratios, i.e., how large are batches relative to the dataset
+        k (np.ndarray(int)): Repetitions for each values in `sigma_t` and `q_t`
+        target_delta (float): Target delta
+        nx (int): Number of discretisation points
         L (float):  Limit for the approximation of the privacy loss distribution integral
 
     Returns:
@@ -79,23 +80,21 @@ def _evaluate_pld(
     _check_args(sigma_t, q_t, k, nx, L)
     assert(relation in ('S', 'R')) # assertion because this argument should only be used internally
 
-    nx = int(nx)
-    nx_half = nx // 2
+    dx = 2.0 * L/nx # discretisation interval \Delta x
+    x = np.linspace(-L, L-dx, nx, dtype=np.complex128) # grid for the numerical integration
 
-    dx = 2.0*L/nx # discretisation interval \Delta x
-    x = np.linspace(-L,L-dx,nx,dtype=np.complex128) # grid for the numerical integration
+    F_prod = np.ones(x.size)
 
-    F_prod=np.ones(x.size)
+    num_episoded = sigma_t.size
 
-    ncomp = sigma_t.size
-
-    if(q_t.size != ncomp) or (k.size != ncomp):
+    if(q_t.size != num_episoded) or (k.size != num_episoded):
         raise ValueError('Arrays provided for sigma_t, q_t and k must all be of the same size')
 
-    for ij in range(ncomp):
+    for ij in range(num_episoded):
 
-        sigma=sigma_t[ij]
-        q=q_t[ij]
+        sigma = sigma_t[ij]
+        q = q_t[ij]
+        ncomp = k[ij]
 
         # Evaluate the PLD distribution,
         if relation == 'R':
@@ -105,23 +104,23 @@ def _evaluate_pld(
             # i.e. start of the integral domain
             ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
 
-
             ey = np.exp(x[ii+1:])
-            Linvx = (sigma**2)*np.log((ey-(1-q))/q) + 0.5
-            dLinvx = (sigma**2)/(1-(1-q)/ey)
-
-            ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
-                q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
+            Linvx = (sigma**2) * np.log((ey - (1-q)) / q) + 0.5
+            ALinvx = (1/np.sqrt(2*np.pi*sigma**2)) * (
+                    (1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
+                    q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2))
+                )
+            dLinvx = (sigma**2) / (1 - (1-q)/ey)
 
             fx = np.zeros(nx)
-            fx[ii+1:] =  np.real(ALinvx*dLinvx)
+            fx[ii+1:] = np.real(ALinvx*dLinvx)
 
         elif relation == 'S':
             # This is the case of substitution relation (subsection 5.2)
             c = q*np.exp(-1/(2*sigma**2))
             ey = np.exp(x)
-            term1=(-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
-            term1=np.maximum(term1,1e-16)
+            term1 = (-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
+            term1 = np.maximum(term1, 1e-16)
             Linvx = (sigma**2)*np.log(term1)
 
             sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
@@ -134,17 +133,21 @@ def _evaluate_pld(
             ALinvx = (1/np.sqrt(2*np.pi*sigma**2))*((1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
                 q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2)))
 
-            fx =  np.real(ALinvx*dLinvx)
+            fx = np.real(ALinvx*dLinvx)
 
+        nx_half = nx // 2
 
         # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
         temp = np.copy(fx[nx_half:])
         fx[nx_half:] = np.copy(fx[:nx_half])
         fx[:nx_half] = temp
 
-        # Compute the DFT
-        FF1 = np.fft.fft(fx*dx)
-        F_prod = F_prod*FF1**k[ij]
+        FF1 = np.fft.fft(fx * dx) # Compute the DFFT
+        F_prod = F_prod * FF1**ncomp
+        if np.any(np.isinf(F_prod)):
+            raise ValueError("Computation reached an infinite value. This can happen if sigma is "\
+                "chosen too small, please check the parameters.")
+
 
     # Compute the inverse DFT
     cfx = np.fft.ifft((F_prod/dx))
