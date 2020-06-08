@@ -104,13 +104,14 @@ def _evaluate_pld(
             # i.e. start of the integral domain
             ii = int(np.floor(float(nx*(L+np.log(1-q))/(2*L))))
 
-            ey = np.exp(x[ii+1:])
+            y = x[ii+1:]
+            ey = np.exp(y)
             Linvx = (sigma**2) * np.log((ey - (1-q)) / q) + 0.5
             ALinvx = (1/np.sqrt(2*np.pi*sigma**2)) * (
                     (1-q)*np.exp(-Linvx*Linvx/(2*sigma**2)) +
                     q*np.exp(-(Linvx-1)*(Linvx-1)/(2*sigma**2))
                 )
-            dLinvx = (sigma**2) / (1 - (1-q)/ey)
+            dLinvx = (sigma**2) / (1 - np.exp(np.log1p(-q) - y))
 
             fx = np.zeros(nx)
             fx[ii+1:] = np.real(ALinvx*dLinvx)
