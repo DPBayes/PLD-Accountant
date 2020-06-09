@@ -87,12 +87,12 @@ def _evaluate_pld(
 
     F_prod = np.ones(x.size)
 
-    num_episoded = sigma_t.size
+    num_episodes = sigma_t.size
 
-    if(q_t.size != num_episoded) or (k.size != num_episoded):
+    if(q_t.size != num_episodes) or (k.size != num_episodes):
         raise ValueError('Arrays provided for sigma_t, q_t and k must all be of the same size')
 
-    for ij in range(num_episoded):
+    for ij in range(num_episodes):
 
         sigma = sigma_t[ij]
         q = q_t[ij]
@@ -121,12 +121,17 @@ def _evaluate_pld(
         elif relation == 'S':
             # This is the case of substitution relation (subsection 5.2)
             c = q*np.exp(-1/(2*sigma**2))
+            if np.allclose(c, 0.):
+                raise ValueError("Your choice of sigma is too small to compute "\
+                    "meaningful privacy guarantees with the Fourier accountant.")
+            c = np.maximum(c, 1e-16)
+
             ey = np.exp(x)
-            term1 = (-(1-q)*(1-ey) +  np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey))/(2*c)
+            sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
+            term1 = (-(1-q)*(1-ey) + sq)/(2*c)
             term1 = np.maximum(term1, 1e-16)
             Linvx = (sigma**2)*np.log(term1)
 
-            sq = np.sqrt((1-q)**2*(1-ey)**2 + 4*c**2*ey)
             nom1 = 4*c**2*ey - 2*(1-q)**2*ey*(1-ey)
             term1 = nom1/(2*sq)
             nom2 = term1 + (1-q)*ey
