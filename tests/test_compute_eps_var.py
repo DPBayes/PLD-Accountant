@@ -44,7 +44,9 @@ class compute_epsilon_regression_tests(unittest.TestCase):
     def test_get_epsilon_R_invalid_sizes(self):
         with self.assertRaises(ValueError):
             get_epsilon_R(sigma = np.ones(2), q = np.ones(2), ncomp = np.ones(1, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_R(sigma = np.ones(2), q = np.ones(1), ncomp = np.ones(2, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_R(sigma = np.ones(1), q = np.ones(2), ncomp = np.ones(2, dtype=np.int32))
 
 
@@ -54,7 +56,6 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         with self.assertRaises(ValueError):
-            get_epsilon_R(sigma = np.linspace(0.45, 0.55, nc), q = np.linspace(0.01, 0.02, nc), ncomp = ks, target_delta=1e-6, nx=1E6, L=5.0)
             get_epsilon_R(sigma = np.linspace(0.0005, 0.0015, nc), q = np.linspace(0.15, 0.25, nc), ncomp = ks, target_delta=1e-4, nx=1E6, L=40.0)
 
 
@@ -79,7 +80,9 @@ class compute_epsilon_regression_tests(unittest.TestCase):
     def test_get_epsilon_S_invalid_sizes(self):
         with self.assertRaises(ValueError):
             get_epsilon_S(sigma = np.ones(2), q = np.ones(2), ncomp = np.ones(1, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_S(sigma = np.ones(2), q = np.ones(1), ncomp = np.ones(2, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_S(sigma = np.ones(1), q = np.ones(2), ncomp = np.ones(2, dtype=np.int32))
 
 
@@ -89,12 +92,12 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         with self.assertRaises(ValueError):
-            get_epsilon_S(sigma = np.linspace(0.45, 0.55, nc), q = np.linspace(0.01, 0.02, nc), ncomp = ks, target_delta=1e-6, nx=1E6, L=5.0)
             get_epsilon_S(sigma = np.linspace(0.0005, 0.0015, nc), q = np.linspace(0.15, 0.25, nc), ncomp = ks, target_delta=1e-4, nx=1E6, L=40.0)
 
     def test_get_epsilon_enforces_all_array_or_all_scalar(self):
         with self.assertRaises(TypeError):
             get_epsilon_S(sigma = 1, q = np.ones(1), ncomp = 10)
+        with self.assertRaises(TypeError):
             get_epsilon_R(sigma = 1, q = np.ones(1), ncomp = 10)
 
 if __name__ == '__main__':

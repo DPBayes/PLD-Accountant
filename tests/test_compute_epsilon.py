@@ -40,6 +40,7 @@ class compute_eps_regression_tests(unittest.TestCase):
         """ Tests that get_epsilon_R raises errors when encountering instabilities."""
         with self.assertRaises(ValueError):
             get_epsilon_R(target_delta=1e-6, sigma=.5, q=0.01, ncomp=1E4, nx=1E6, L=5.0)
+        with self.assertRaises(ValueError):
             get_epsilon_R(target_delta=1e-4, sigma=0.001, q=0.2, ncomp=1E4, nx=1E6, L=40.0)
 
     def test_get_epsilon_S_regression_valid_params(self):
@@ -62,7 +63,6 @@ class compute_eps_regression_tests(unittest.TestCase):
     def test_get_epsilon_S_exceptions(self):
         """ Tests that get_epsilon_R raises errors when encountering instabilities."""
         with self.assertRaises(ValueError):
-            get_epsilon_S(target_delta=1e-6, sigma=.5, q=0.01, ncomp=1E4, nx=1E6, L=5.0)
             get_epsilon_S(target_delta=1e-4, sigma=0.001, q=0.2, ncomp=1E4, nx=1E6, L=40.0)
 
 if __name__ == '__main__':

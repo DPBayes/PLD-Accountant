@@ -44,7 +44,9 @@ class compute_delta_regression_tests(unittest.TestCase):
     def test_get_delta_R_invalid_sizes(self):
         with self.assertRaises(ValueError):
             get_delta_R(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_delta_R(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_delta_R(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2, dtype=np.int32))
 
     def test_get_delta_S_regression_valid_params(self):
@@ -68,7 +70,9 @@ class compute_delta_regression_tests(unittest.TestCase):
     def test_get_delta_S_invalid_sizes(self):
         with self.assertRaises(ValueError):
             get_delta_S(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_delta_S(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_delta_S(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2, dtype=np.int32))
 
 

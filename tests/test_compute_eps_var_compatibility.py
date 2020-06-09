@@ -44,7 +44,9 @@ class compute_epsilon_regression_tests(unittest.TestCase):
     def test_get_epsilon_R_invalid_sizes(self):
         with self.assertRaises(ValueError):
             get_epsilon_R(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_R(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_R(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2, dtype=np.int32))
 
 
@@ -54,7 +56,6 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         with self.assertRaises(ValueError):
-            get_epsilon_R(sigma_t = np.linspace(0.45, 0.55, nc), q_t = np.linspace(0.01, 0.02, nc), k = ks, target_delta=1e-6, nx=1E6, L=5.0)
             get_epsilon_R(sigma_t = np.linspace(0.0005, 0.0015, nc), q_t = np.linspace(0.15, 0.25, nc), k = ks, target_delta=1e-4, nx=1E6, L=40.0)
 
 
@@ -79,7 +80,9 @@ class compute_epsilon_regression_tests(unittest.TestCase):
     def test_get_epsilon_S_invalid_sizes(self):
         with self.assertRaises(ValueError):
             get_epsilon_S(sigma_t = np.ones(2), q_t = np.ones(2), k = np.ones(1, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_S(sigma_t = np.ones(2), q_t = np.ones(1), k = np.ones(2, dtype=np.int32))
+        with self.assertRaises(ValueError):
             get_epsilon_S(sigma_t = np.ones(1), q_t = np.ones(2), k = np.ones(2, dtype=np.int32))
 
 
@@ -89,7 +92,6 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         ks = 10 * np.ones(nc, dtype=np.int32) #number of compositions for each value of (q,sigma)
 
         with self.assertRaises(ValueError):
-            get_epsilon_S(sigma_t = np.linspace(0.45, 0.55, nc), q_t = np.linspace(0.01, 0.02, nc), k = ks, target_delta=1e-6, nx=1E6, L=5.0)
             get_epsilon_S(sigma_t = np.linspace(0.0005, 0.0015, nc), q_t = np.linspace(0.15, 0.25, nc), k = ks, target_delta=1e-4, nx=1E6, L=40.0)
 
 
