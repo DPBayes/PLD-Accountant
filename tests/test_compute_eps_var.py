@@ -94,11 +94,5 @@ class compute_epsilon_regression_tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_epsilon_S(sigma = np.linspace(0.0005, 0.0015, nc), q = np.linspace(0.15, 0.25, nc), ncomp = ks, target_delta=1e-4, nx=1E6, L=40.0)
 
-    def test_get_epsilon_enforces_all_array_or_all_scalar(self):
-        with self.assertRaises(TypeError):
-            get_epsilon_S(sigma = 1, q = np.ones(1), ncomp = 10)
-        with self.assertRaises(TypeError):
-            get_epsilon_R(sigma = 1, q = np.ones(1), ncomp = 10)
-
 if __name__ == '__main__':
     unittest.main()

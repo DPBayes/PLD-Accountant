@@ -75,12 +75,6 @@ class compute_delta_regression_tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_delta_S(sigma = np.ones(1), q = np.ones(2), ncomp = np.ones(2, dtype=np.int32))
 
-    def test_get_delta_enforces_all_array_or_all_scalar(self):
-        with self.assertRaises(TypeError):
-            get_delta_S(sigma = 1, q = np.ones(1), ncomp = 10)
-        with self.assertRaises(TypeError):
-            get_delta_R(sigma = 1, q = np.ones(1), ncomp = 10)
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -72,12 +72,12 @@ def _get_delta(
 
     nx = int(nx)
 
-    if not (isinstance(sigma, np.ndarray) or isinstance(q, np.ndarray) or isinstance(ncomp, np.ndarray)):
+    if not isinstance(sigma, np.ndarray):
         sigma = np.array([sigma])
+    if not isinstance(q, np.ndarray):
         q = np.array([q])
+    if not isinstance(ncomp, np.ndarray):
         ncomp = np.array([int(ncomp)])
-    elif not (isinstance(sigma, np.ndarray) and isinstance(q, np.ndarray) and isinstance(ncomp, np.ndarray)):
-        raise TypeError("Arguments sigma, q and ncomp must either be all scalar or all numpy arrays")
 
     x, cfx, dx = _evaluate_pld(relation, sigma, q, ncomp, nx, L)
 
