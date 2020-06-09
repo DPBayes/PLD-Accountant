@@ -68,7 +68,7 @@ def get_epsilon_R(
         Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049
     """
-    warnings.warn("DEPRECATED FUNCTION! Use compute_eps.get_epsilon_R instead.", DeprecationWarning)
+    warnings.warn("DEPRECATED FUNCTION! Use fourier_accountant.get_epsilon_R instead.", np.VisibleDeprecationWarning)
     return get_epsilon_R_new(target_delta, sigma_t, q_t, k, nx, L)
 
 def get_epsilon_S(
@@ -119,5 +119,5 @@ def get_epsilon_S(
         Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049
     """
-    warnings.warn("DEPRECATED FUNCTION! Use compute_eps.get_epsilon_S instead.", DeprecationWarning)
+    warnings.warn("DEPRECATED FUNCTION! Use fourier_accountant.get_epsilon_S instead.", np.VisibleDeprecationWarning)
     return get_epsilon_S_new(target_delta, sigma_t, q_t, k, nx, L)

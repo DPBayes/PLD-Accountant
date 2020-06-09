@@ -63,7 +63,7 @@ def get_delta_R(
         Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049
     """
-    warnings.warn("DEPRECATED FUNCTION! Use compute_delta.get_delta_R instead.", DeprecationWarning)
+    warnings.warn("DEPRECATED FUNCTION! Use fourier_accountant.get_delta_R instead.", np.VisibleDeprecationWarning)
     return get_delta_R_new(target_eps, sigma_t, q_t, k, nx, L)
 
 
@@ -109,5 +109,5 @@ def get_delta_S(
         Computing Tight Differential Privacy Guarantees Using FFT
             https://arxiv.org/abs/1906.03049
     """
-    warnings.warn("DEPRECATED FUNCTION! Use compute_delta.get_delta_S instead.", DeprecationWarning)
+    warnings.warn("DEPRECATED FUNCTION! Use fourier_accountant.get_delta_S instead.", np.VisibleDeprecationWarning)
     return get_delta_S_new(target_eps, sigma_t, q_t, k, nx, L)
