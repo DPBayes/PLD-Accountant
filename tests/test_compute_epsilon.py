@@ -3,7 +3,7 @@
 Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 
-Tests for delta computation
+Tests for epsilon computation with constant sigma and q
 
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
@@ -24,12 +24,12 @@ class compute_eps_regression_tests(unittest.TestCase):
         """ Tests that results of get_epsilon_R did not drift from last version."""
         test_data = [
             (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  2.446734047007243),
-            (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=40.0),  2.446734000493541),
+            (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=40.0),  2.446733916332568),
             (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E4, nx=1E5, L=20.0),  2.4467323179602007),
-            (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E5, nx=1E6, L=20.0),  8.984848932073394),
+            (dict(target_delta=1e-6, sigma=2.0, q=0.01, ncomp=1E5, nx=1E6, L=20.0),  8.984848512304165),
             (dict(target_delta=1e-5, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  2.162704603256141),
-            (dict(target_delta=1e-6, sigma=1.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  6.907425145306444),
-            (dict(target_delta=1e-6, sigma=1.0, q=0.02, ncomp=1E4, nx=1E6, L=20.0), 15.641357428040273),
+            (dict(target_delta=1e-6, sigma=1.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0),  6.907422808389587),
+            (dict(target_delta=1e-6, sigma=1.0, q=0.02, ncomp=1E4, nx=1E6, L=20.0), 15.64135722007042),
         ]
 
         for params, expected in test_data:
@@ -40,6 +40,7 @@ class compute_eps_regression_tests(unittest.TestCase):
         """ Tests that get_epsilon_R raises errors when encountering instabilities."""
         with self.assertRaises(ValueError):
             get_epsilon_R(target_delta=1e-6, sigma=.5, q=0.01, ncomp=1E4, nx=1E6, L=5.0)
+        with self.assertRaises(ValueError):
             get_epsilon_R(target_delta=1e-4, sigma=0.001, q=0.2, ncomp=1E4, nx=1E6, L=40.0)
 
     def test_get_epsilon_S_regression_valid_params(self):
@@ -62,7 +63,6 @@ class compute_eps_regression_tests(unittest.TestCase):
     def test_get_epsilon_S_exceptions(self):
         """ Tests that get_epsilon_R raises errors when encountering instabilities."""
         with self.assertRaises(ValueError):
-            get_epsilon_S(target_delta=1e-6, sigma=.5, q=0.01, ncomp=1E4, nx=1E6, L=5.0)
             get_epsilon_S(target_delta=1e-4, sigma=0.001, q=0.2, ncomp=1E4, nx=1E6, L=40.0)
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
 Fourier Accountant
 Code for computing tight DP guarantees for the subsampled Gaussian mechanism.
 
-Tests for delta computation
+Tests for delta computation with constant sigma and q
 
 The method is described in
 A.Koskela, J.Jälkö and A.Honkela:
