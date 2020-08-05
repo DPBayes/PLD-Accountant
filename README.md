@@ -4,8 +4,8 @@ Python code for computing tight DP-guarantees for the subsampled Gaussian mechan
 
 The method is described in:
 
-Antti Koskela, Joonas Jälkö, Antti Honkela:
-Computing Tight Differential Privacy Guarantees Using FFT, 
+Antti Koskela, Joonas Jälkö, Antti Honkela:  
+Computing Tight Differential Privacy Guarantees Using FFT  
 International Conference on Artificial Intelligence and Statistics (2020)
 
 # API and Usage
