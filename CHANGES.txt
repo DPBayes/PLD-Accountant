@@ -1,6 +1,8 @@
 # pending changes
     - README: brief API description added
     - support for eps,delta computations with varying parameters (docs, tests, code quality)
+    - added experimental computations for discrete mechanisms (in `fourier_accountant.experimental`)
+    - added experimental computations for tight upper/lower for subsampled Gaussian mechanism (in `fourier_accountant.experimental`)
 
 # 0.12.0
     - first public release as `fourier_accountant` package
