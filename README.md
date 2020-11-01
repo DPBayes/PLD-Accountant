@@ -77,3 +77,8 @@ delta = fourier_accountant.get_delta_R(target_eps=1.0, sigma=sigma, q=q, ncomp=n
 print(delta)
 # 0.0003151995621652058
 ```
+
+## PyPI package
+
+The accountant can be uploaded as a PyPI package 'fourier-accountant':
+pip3 install fourier-accountant
