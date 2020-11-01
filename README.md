@@ -50,10 +50,6 @@ large enough to cover the computed epsilon, otherwise a `ValueError` is raised (
 `nx` is the number of evaluation points in $[-L,L]$.
 If you find results output by the functions to be inaccurate, try increasing these two parameters.
 
-Due to numerical instabilities, corner cases exist where functions sometimes returns
-inaccurate values. If you think this is occuring, increasing `nx` and verifying that
-the returned value does not change by much is usually a good heuristic to verify the output.
-
 ## Usage Example
 
 ```python
