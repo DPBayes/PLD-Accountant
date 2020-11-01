@@ -80,5 +80,4 @@ print(delta)
 
 ## PyPI package
 
-The accountant can be uploaded as a PyPI package 'fourier-accountant':
-pip3 install fourier-accountant
+The accountant can be uploaded as a PyPI package 'fourier-accountant'.
