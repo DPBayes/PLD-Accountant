@@ -44,11 +44,10 @@ same length.
 ## Usage Notes
 
 Note that the functions rely on numerical approximations, which are influenced
-by choice of parameters `nx` and `L`. Increasing `L` roughly increases the range over
+by choice of parameters `nx` and `L`. Increasing `L` increases the range over
 which the integral of the privacy loss distribution is approximated. `L` must be chosen
-large enough to cover the computed epsilon, otherwise a `ValueError` is raised (in `get_epsilon_*`).
+large enough, otherwise a `ValueError` is raised (in `get_epsilon_*`).
 `nx` is the number of evaluation points in $[-L,L]$.
-If you find results output by the functions to be inaccurate, try increasing these two parameters.
 
 ## Usage Example
 
