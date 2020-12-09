@@ -10,17 +10,14 @@ import numpy as np
 def get_delta_upper(P1, P2, target_eps=1.0,ncomp=500,nx=1E6,L=20.0):
     """
     Calculates the upper bound for delta given a target epsilon for
-    ncomp-fold composition of exponential mechanism with privacy value eps_em
-    where the quality score is a counting query.
+    ncomp-fold composition of any discrete mechanism determined by neighbouring
+    distributions P1 and P2.
 
     Args:
         target_eps: The targeted value for epsilon of the composition.
-        eps_em: The epsilon value of the mechanism under composition.
         ncomp: Number of compositions of the mechanism.
         nx: Number of points in the discretisation grid.
         L: Limit for the approximation integral.
-        m: Number of elements accepted/counted by the query.
-        n: Total number of elements in the counting query.
     """
 
     #nx = int(nx)
@@ -109,17 +106,14 @@ def get_delta_upper(P1, P2, target_eps=1.0,ncomp=500,nx=1E6,L=20.0):
 def get_delta_lower(P1, P2, target_eps=1.0,ncomp=500,nx=1E6,L=20.0):
     """
     Calculates the lower bound for delta given a target epsilon for
-    ncomp-fold composition of exponential mechanism with privacy value eps_em
-    where the quality score is a counting query.
+    ncomp-fold composition of any discrete mechanism determined by neighbouring
+    distributions P1 and P2.
 
     Args:
         target_eps: The targeted value for epsilon of the composition.
-        eps_em: The epsilon value of the mechanism under composition.
         ncomp: Number of compositions of the mechanism.
         nx: Number of points in the discretisation grid.
         L: Limit for the approximation integral.
-        m: Number of elements accepted/counted by the query.
-        n: Total number of elements in the counting query.
     """
 
 
