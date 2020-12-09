@@ -53,10 +53,7 @@ def get_delta_upper(P1, P2, target_eps=1.0,ncomp=500,nx=1E6,L=20.0):
     for i in range(0,len(Lx)):
         ii = int(np.ceil((L+Lx[i])/dx))
         omega_y[ii]+=P1[i]
-        # ii = int(np.ceil((L+Lx[i])/dx))
-        # omega_upper[ii]+=P1[i]
-        # ii = int(np.floor((L+Lx[i])/dx))
-        # omega_lower[ii]+=P1[i]
+
 
     fx = omega_y
     half = int(nx/2)
@@ -98,7 +95,6 @@ def get_delta_upper(P1, P2, target_eps=1.0,ncomp=500,nx=1E6,L=20.0):
 
 # Parameters:
 # target_eps - target epsilon
-# mech_eps - parameter epsilon of the mechanism
 # nx - number of points in the discretisation grid
 # L -  limit for the integral
 # ncomp - compute for ncomp number of compositions
@@ -150,10 +146,7 @@ def get_delta_lower(P1, P2, target_eps=1.0,ncomp=500,nx=1E6,L=20.0):
     for i in range(0,len(Lx)):
         ii = int(np.floor((L+Lx[i])/dx))
         omega_y[ii]+=P1[i]
-        # ii = int(np.ceil((L+Lx[i])/dx))
-        # omega_upper[ii]+=P1[i]
-        # ii = int(np.floor((L+Lx[i])/dx))
-        # omega_lower[ii]+=P1[i]
+        
 
     fx = omega_y
     half = int(nx/2)
