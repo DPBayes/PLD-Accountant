@@ -53,8 +53,9 @@ large enough, otherwise a `ValueError` is raised (in `get_epsilon_*`).
 
 ```python
 import fourier_accountant
+import numpy as np
 
-ncomp = 1000  # number of compositions of DP queries over minibatches
+ncomp = 10000  # number of compositions of DP queries over minibatches
 q     = 0.01  # subsampling ratio of minibatch
 sigma = 4.0   # noise level for each query
 
