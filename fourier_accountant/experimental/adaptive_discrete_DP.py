@@ -28,7 +28,7 @@ def get_L(P1, P2, target_eps=1.0,ncomp=500, error_tol=1e-5):
     error_term=1.0
 
     while error_term > error_tol:
-        L=2*L
+        L=1.05*L
         #Compute the lambda-divergence \alpha^+
         lambda_sum_plus=0
         lambd=L/10
@@ -55,8 +55,8 @@ def get_L(P1, P2, target_eps=1.0,ncomp=500, error_tol=1e-5):
         #Evaluate the bound of Thm. 10, stabilised version, rough upper bound
 
         #1 - exp(-1) > 0.6, i.e. assuming L \geq 1, the denominator \geq 0.6.
-        T1=(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*0.6)/(np.exp(alpha_plus) - 1)
-        T2=(np.exp((ncomp+1)*alpha_minus - lambd*L)*0.6)/(np.exp(alpha_minus)  - 1)
+        T1=(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*0.99)/(np.exp(alpha_plus) - 1)
+        T2=(np.exp((ncomp+1)*alpha_minus - lambd*L)*0.99)/(np.exp(alpha_minus)  - 1)
 
         # print('nominator : ' + str(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*0.6))
         # print('denominator : ' + str(np.exp(alpha_plus) - 1))
@@ -64,6 +64,7 @@ def get_L(P1, P2, target_eps=1.0,ncomp=500, error_tol=1e-5):
 
         error_term= (T1+T2)
 
+    print('L: ' + str(L))
     return L, error_term
 
 
