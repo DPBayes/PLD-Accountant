@@ -27,42 +27,52 @@ def get_L(P1, P2, target_eps=1.0,ncomp=500, error_tol=1e-5):
     L=1.0
     error_term=1.0
 
+    lambd_pow_array=np.linspace(-3,2,20)
+
     while error_term > error_tol:
+
+
+        # increase until the error goes under 'error_tol'
         L=1.05*L
+
+        err_temp=1.0
+
         #Compute the lambda-divergence \alpha^+
-        lambda_sum_plus=0
-        lambd=L/10
-        k=ncomp
-        for i in range(0,len(P1)):
-            lambda_sum_plus+=(P1[i]/P2[i])**lambd*P1[i]
-        alpha_plus=np.log(lambda_sum_plus)
 
-        #Compute the lambda-divergence \alpha^-
-        lambda_sum_minus=0
-        k=ncomp
-        for i in range(0,len(P1)):
-            lambda_sum_minus+=(P2[i]/P1[i])**lambd*P2[i]
-        alpha_minus=np.log(lambda_sum_minus)
+        for l_pow in lambd_pow_array:
 
-        #Evaluate the bound of Thm. 10
-        # T1=(2*np.exp((ncomp+1)*alpha_plus) - np.exp((ncomp)*alpha_plus) - np.exp(alpha_plus) )/(np.exp(alpha_plus) - 1)
-        # T2=(np.exp((ncomp+1)*alpha_minus) - np.exp(alpha_minus) )/(np.exp(alpha_minus)  - 1)
-        # error_term= (T1+T2)*(np.exp(-lambd*L)/(1-np.exp(-lambd*L)))
+            lambda_sum_plus=0
+            lambd=L*10**l_pow
+            k=ncomp
+            for i in range(0,len(P1)):
+                lambda_sum_plus+=(P1[i]/P2[i])**lambd*P1[i]
+            alpha_plus=np.log(lambda_sum_plus)
 
+            #Compute the lambda-divergence \alpha^-
+            lambda_sum_minus=0
+            k=ncomp
+            for i in range(0,len(P1)):
+                lambda_sum_minus+=(P2[i]/P1[i])**lambd*P2[i]
+            alpha_minus=np.log(lambda_sum_minus)
 
+            #Evaluate the bound of Thm. 10
+            # T1=(2*np.exp((ncomp+1)*alpha_plus) - np.exp((ncomp)*alpha_plus) - np.exp(alpha_plus) )/(np.exp(alpha_plus) - 1)
+            # T2=(np.exp((ncomp+1)*alpha_minus) - np.exp(alpha_minus) )/(np.exp(alpha_minus)  - 1)
+            # error_term= (T1+T2)*(np.exp(-lambd*L)/(1-np.exp(-lambd*L)))
 
+            #Evaluate the bound of Thm. 10, stabilised version, rough upper bound
 
-        #Evaluate the bound of Thm. 10, stabilised version, rough upper bound
+            #assuming L \geq 3, (1 - exp(-L^2/2))^{-1} < 1.02
+            T1=(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*1.02)/(np.exp(alpha_plus) - 1)
+            T2=(np.exp((ncomp+1)*alpha_minus - lambd*L)*1.02)/(np.exp(alpha_minus)  - 1)
 
-        #1 - exp(-1) > 0.6, i.e. assuming L \geq 1, the denominator \geq 0.6.
-        T1=(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*0.99)/(np.exp(alpha_plus) - 1)
-        T2=(np.exp((ncomp+1)*alpha_minus - lambd*L)*0.99)/(np.exp(alpha_minus)  - 1)
+            # print('nominator : ' + str(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*0.6))
+            # print('denominator : ' + str(np.exp(alpha_plus) - 1))
 
-        # print('nominator : ' + str(2*np.exp((ncomp+1)*alpha_plus - lambd*L)*0.6))
-        # print('denominator : ' + str(np.exp(alpha_plus) - 1))
+            if (T1+T2) < err_temp:
+                err_temp=(T1+T2)
 
-
-        error_term= (T1+T2)
+        error_term=err_temp
 
     print('L: ' + str(L))
     return L, error_term
