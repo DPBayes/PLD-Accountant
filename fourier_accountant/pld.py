@@ -9,27 +9,25 @@ class PrivacyLossDistribution(metaclass=ABCMeta):
     def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
         """ Determines suitable hyperparameters for the Fourier accountant for a given error tolerance. """
 
-    @property
-    def privacy_loss_values(self) -> typing.Iterable[float]:
+    @abstractproperty
+    def privacy_loss_values(self) -> np.ndarray:
         """ The values of the privacy loss random variable over the DP mechanisms output domain.
 
         Not ordered and not guaranteed to be free of duplicates.
         """
-        p1, p2 = self.probability_mass_functions
-        return np.log(p1 / p2)
-
-    # def privacy_loss_probabilities(self) -> typing.Iterable[float]:
-    #     """ The probability mass omega associated with each privacy loss value. """
 
     @abstractproperty
-    def probability_mass_functions(self) -> typing.Tuple[typing.Iterable[float], typing.Iterable[float]]:
-        """ The probability masses in the DP mechanisms outputs domain for both neighboring data sets. """
+    def privacy_loss_probabilities(self) -> np.ndarray:
+        """ The probability mass omega associated with each privacy loss value. """
 
+    @abstractmethod
+    def discretize_privacy_loss_distribution(self, start: float, stop: float, step: float) -> np.ndarray:
+        """ Returns the associated probability masses associated with each value of a given discretised interval in privacy loss space. """
 
 class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
     """ The privacy loss distribution defined by two discrete probability mass functions. """
 
-    def __init__(self, p1, p2) -> None:
+    def __init__(self, p1: np.typing.ArrayLike, p2: numpy.typing.ArrayLike) -> None:
         """ indices in p1/p2 must correspond. ( what exactly do p1/p2 give probabilities for? ) """
         if np.size(p1) != np.size(p2):
             raise ValueError("Both probability mass distributions must have the same size.")
@@ -41,8 +39,25 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
         raise NotImplementedError()
 
     @property
-    def probability_mass_functions(self) -> typing.Tuple[typing.Iterable[float], typing.Iterable[float]]:
-        return self._p1, self._p2
+    def privacy_loss_values(self) -> np.ndarray:
+        return np.log(self._p1 / self._p2)
+
+    @property
+    def privacy_loss_probabilities(self) -> np.ndarray:
+        return self._p1
+
+    def discretize_privacy_loss_distribution(self, start: float, stop: float, step: float) -> np.ndarray:
+        nx = (stop - start) // step
+
+        Lx = self.privacy_loss_values
+        ps = self.privacy_loss_probabilities
+
+        omega_y = np.zeros(nx)
+        for lx, p in zip(Lx, ps): # todo(lumip): can optimise?
+            ii = int(np.ceil((lx - start) / dx))
+            omega_y[ii] += p
+
+        return omega_y
 
 class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistribution):
     """
@@ -75,36 +90,34 @@ def get_delta_error_term(
     # Determine the privacy loss function
     Lx = pld.privacy_loss_values
 
-    p1, p2 = pld.probability_mass_functions
+    ps = pld.privacy_loss_probabilities
 
-    assert np.size(p1) == np.size(p2)
-    assert np.size(p1) == np.size(Lx)
+    assert np.size(ps) == np.size(Lx)
 
     # Compute the lambda-divergence \alpha^+
     lambd = .5 * L
-    alpha_plus = scipy.special.logsumexp(np.log(p1) + lambd * Lx)
+    alpha_plus = scipy.special.logsumexp(np.log(ps) + lambd * Lx)
 
     # Compute the lambda-divergence \alpha^-
-    alpha_minus = scipy.special.logsumexp(np.log(p2) - lambd * Lx) # todo(lumip): should be p1 also?
+    alpha_minus = scipy.special.logsumexp(np.log(ps) - lambd * Lx)
 
     # Evaluate the bound of Thm. 10
     k = num_compositions
 
-    log_denom = L * lambd + np.log(1 - np.exp(-L * lambd))
+    common_factor_log = -(L * lambd + np.log1p(-np.exp(-2 * L * lambd)))
 
     T1_log_num = (k+1) * alpha_plus + np.log(2) + np.log1p(-.5*(np.exp(-alpha_plus) + np.exp(-k * alpha_plus)))
     T1_log_denom = alpha_plus + np.log1p(-np.exp(-alpha_plus))
 
-    T1_log = T1_log_num - T1_log_denom - log_denom
+    T1_log = T1_log_num - T1_log_denom + common_factor_log
     # T1 = (2 * np.exp((k + 1) * alpha_plus) - np.exp(k * alpha_plus) - np.exp(alpha_plus) ) / (np.exp(alpha_plus) - 1)
 
     T2_log_num = (k+1) * alpha_minus + np.log1p(-np.exp(-k * alpha_minus))
     T2_log_denom = alpha_minus + np.log1p(-np.exp(-alpha_minus))
 
-    T2_log = T2_log_num - T2_log_denom - log_denom
+    T2_log = T2_log_num - T2_log_denom + common_factor_log
     # T2 = (np.exp((k + 1) * alpha_minus) - np.exp(alpha_minus) ) / (np.exp(alpha_minus) - 1)
     # error_term = (T1 + T2) * (np.exp(-lambd*L)/(1-np.exp(-lambd*L)))
-    # error_term = (T1 + T2) / (np.exp(lambd * L) - 1)
 
     T_max_log = np.maximum(T1_log, T2_log)
 
@@ -129,12 +142,6 @@ def get_delta_upper_bound(
         num_discretisation_points: Number of points in the discretisation grid.
         L: Limit for the approximation integral.
     """
-    # Determine the privacy loss function
-    Lx = pld.privacy_loss_values
-
-    p1, _ = pld.probability_mass_functions
-
-    assert np.size(p1) == np.size(Lx)
 
     # Evaluate the bound of Thm. 10
     error_term = get_delta_error_term(pld, num_compositions, L)
@@ -142,10 +149,7 @@ def get_delta_upper_bound(
     nx = int(num_discretisation_points)
     dx = 2.0 * L / nx # discretisation interval \Delta x
 
-    omega_y = np.zeros(nx)
-    for lx, p in zip(Lx, p1): # todo(lumip): can optimise?
-        ii = int(np.ceil((L + lx) / dx))
-        omega_y[ii] += p
+    omega_y = pld.discretize_privacy_loss_distribution(-L, L, dx)
 
     # Flip omega_y, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
     half = nx // 2
