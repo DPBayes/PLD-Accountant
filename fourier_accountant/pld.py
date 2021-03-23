@@ -82,20 +82,21 @@ class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistributio
         super().get_accountant_parameters(error_tolerance)
 
 def get_delta_error_term(
-    pld: PrivacyLossDistribution,
+        pld: PrivacyLossDistribution,
         num_compositions: int = 500,
-        L: float = 20.0
+        L: float = 20.0,
+        lambd: typing.Optional[float] = None
     ):
 
     # Determine the privacy loss function
     Lx = pld.privacy_loss_values
-
     ps = pld.privacy_loss_probabilities
-
     assert np.size(ps) == np.size(Lx)
 
+    if lambd is None:
+        lambd = .5 * L
+
     # Compute the lambda-divergence \alpha^+
-    lambd = .5 * L
     alpha_plus = scipy.special.logsumexp(np.log(ps) + lambd * Lx)
 
     # Compute the lambda-divergence \alpha^-
