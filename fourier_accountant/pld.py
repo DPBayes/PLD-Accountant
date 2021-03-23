@@ -150,11 +150,37 @@ def get_delta_error_term(
 
     return error_term
 
+def _delta_fft_computations(omegas: np.ndarray, target_eps: float, num_compositions: int, L: float):
+    """ Core computation of privacy loss distribution convolutions using DFFT. """
+    # Flip omegas, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
+    nx = len(omegas)
+    half = nx // 2
+    fx = np.concatenate((omegas[half:], omegas[:half]))
+    assert np.size(fx) == np.size(omegas)
+
+    # Compute the DFT
+    FF1 = np.fft.fft(fx)
+
+    # Take elementwise powers and compute the inverse DFT
+    cfx = np.real(np.fft.ifft((FF1 ** num_compositions)))
+
+    # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
+    cfx = np.concatenate((cfx[half:], cfx[:half]))
+
+    assert np.allclose(np.sum(cfx), 1), "sum over convolved pld is not one!"
+
+    # Evaluate \delta(target_eps)
+    x = np.linspace(-L, L, nx, endpoint=False) # grid for the numerical integration
+    exp_e = 1 - np.exp(target_eps - x)
+    integrand = exp_e * cfx
+    sum_int = np.sum(integrand[exp_e > 0])
+    return sum_int
+
 def get_delta_upper_bound(
         pld: PrivacyLossDistribution,
-        target_eps: float = 1.0,
-        num_compositions: int = 500,
-        num_discretisation_points: int = 1E6,
+        target_eps: float,
+        num_compositions: int,
+        num_discretisation_points: int = int(1E6),
         L: float = 20.0
     ):
     """
@@ -175,28 +201,34 @@ def get_delta_upper_bound(
 
     omega_y, _ = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
-    # Flip omega_y, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
-    half = nx // 2
-    fx = np.concatenate((omega_y[half:], omega_y[:half]))
-    assert np.size(fx) == np.size(omega_y)
+    delta = _delta_fft_computations(omega_y, target_eps, num_compositions, L)
+    delta += error_term
 
-    # Compute the DFT
-    FF1 = np.fft.fft(fx)
+    return delta
 
-    # Take elementwise powers and compute the inverse DFT
-    cfx = np.real(np.fft.ifft((FF1 ** num_compositions)))
+def get_delta_lower_bound(
+        pld: PrivacyLossDistribution,
+        target_eps: float,
+        num_compositions: int,
+        num_discretisation_points: int = int(1E6),
+        L: float = 20.0
+    ):
+    """
+    Calculates the lower bound for delta given a target epsilon for
+    k-fold composition of any discrete mechanism.
 
-    # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
-    cfx = np.concatenate((cfx[half:], cfx[:half]))
+    Args:
+        target_eps: The targeted value for epsilon of the composition.
+        num_compositions: Number of compositions of the mechanism.
+        num_discretisation_points: Number of points in the discretisation grid.
+        L: Limit for the approximation integral.
+    """
+    error_term = get_delta_error_term(pld, num_compositions, L)
+    nx = int(num_discretisation_points)
+    _, omega_y = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
-    assert np.allclose(np.sum(cfx), 1), "sum over convolved pld is not one!"
-
-    # Evaluate \delta(target_eps)
-    x = np.linspace(-L, L, nx, endpoint=False) # grid for the numerical integration
-    exp_e = 1 - np.exp(target_eps - x)
-    integrand = exp_e * cfx
-    sum_int = np.sum(integrand[exp_e > 0])
-    delta = sum_int + error_term
+    delta = _delta_fft_computations(omega_y, target_eps, num_compositions, L)
+    delta -= error_term
 
     return delta
 
