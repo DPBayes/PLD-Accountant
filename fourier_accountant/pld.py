@@ -27,7 +27,7 @@ class PrivacyLossDistribution(metaclass=ABCMeta):
 class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
     """ The privacy loss distribution defined by two discrete probability mass functions. """
 
-    def __init__(self, p1: np.typing.ArrayLike, p2: numpy.typing.ArrayLike) -> None:
+    def __init__(self, p1, p2) -> None:
         """ indices in p1/p2 must correspond. ( what exactly do p1/p2 give probabilities for? ) """
         if np.size(p1) != np.size(p2):
             raise ValueError("Both probability mass distributions must have the same size.")
@@ -46,8 +46,9 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
     def privacy_loss_probabilities(self) -> np.ndarray:
         return self._p1
 
-    def discretize_privacy_loss_distribution(self, start: float, stop: float, step: float) -> np.ndarray:
-        nx = (stop - start) // step
+    def discretize_privacy_loss_distribution(self, start: float, stop: float, number_of_discretisation_points: int) -> np.ndarray:
+        nx = number_of_discretisation_points
+        dx = (stop - start) / nx
 
         Lx = self.privacy_loss_values
         ps = self.privacy_loss_probabilities
@@ -63,13 +64,15 @@ class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistributio
     """
     PLD for exponential mechanism with privacy value eps_em
     where the quality score is a counting query.
-
-    Args:
-        eps_em: The epsilon value of the mechanism under composition.
-        m: Number of elements accepted/counted by the query.
-        n: Total number of elements in the counting query.
     """
+
     def __init__(self, eps_em: float, m: int, n: int) -> None:
+        """
+        Args:
+            eps_em: The epsilon value of the mechanism under composition.
+            m: Number of elements accepted/counted by the query.
+            n: Total number of elements in the counting query.
+        """
         p1 = np.array([np.exp(eps_em*m),  np.exp(eps_em*(n-m))])
         p1 /= np.sum(p1)
 
@@ -148,9 +151,8 @@ def get_delta_upper_bound(
     error_term = get_delta_error_term(pld, num_compositions, L)
 
     nx = int(num_discretisation_points)
-    dx = 2.0 * L / nx # discretisation interval \Delta x
 
-    omega_y = pld.discretize_privacy_loss_distribution(-L, L, dx)
+    omega_y = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
     # Flip omega_y, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
     half = nx // 2
