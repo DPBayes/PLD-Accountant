@@ -46,19 +46,40 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
     def privacy_loss_probabilities(self) -> np.ndarray:
         return self._p1
 
-    def discretize_privacy_loss_distribution(self, start: float, stop: float, number_of_discretisation_points: int) -> np.ndarray:
-        nx = number_of_discretisation_points
+    def discretize_privacy_loss_distribution(self, start: float, stop: float, number_of_discretisation_bins: int) -> np.ndarray:
+        """ Computes privacy loss mass function evaluated for equally-sized bins.
+
+        Returns:
+            omega_y_L, omega_y_R: np.ndarray of size `number_of_discretisation_bins`
+        """
+
+        nx = number_of_discretisation_bins
         dx = (stop - start) / nx
 
         Lx = self.privacy_loss_values
         ps = self.privacy_loss_probabilities
 
-        omega_y = np.zeros(nx)
-        for lx, p in zip(Lx, ps): # todo(lumip): can optimise?
-            ii = int(np.ceil((lx - start) / dx))
-            omega_y[ii] += p
+        # omega_y = np.zeros(nx)
+        # for lx, p in zip(Lx, ps): # todo(lumip): can optimise?
+        #     ii = int(np.ceil((lx - start) / dx))
+        #     assert ii >= 0 and ii < nx
+        #     omega_y[ii] += p
 
-        return omega_y
+        omega_y_R = np.zeros(nx)
+        iis = np.ceil((Lx - start) / dx).astype(int)
+        assert np.all((iis >= 0) & (iis < nx))
+        np.add.at(omega_y_R, iis, ps)
+
+        # note(lumip): the above is just a histogram computation, but currently does not fit neatly to np.histogram
+        # because we are dealing with rightmost bin a bit oddly AND np.histogram includes rightmost border for some reason
+        # which we (probably) don't want
+
+        omega_y_L = np.zeros(nx)
+        iis = np.ceil((Lx - start) / dx).astype(int)
+        assert np.all((iis >= 0) & (iis < nx))
+        np.add.at(omega_y_L, iis, ps)
+
+        return omega_y_L, omega_y_R
 
 class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistribution):
     """
@@ -152,7 +173,7 @@ def get_delta_upper_bound(
 
     nx = int(num_discretisation_points)
 
-    omega_y = pld.discretize_privacy_loss_distribution(-L, L, nx)
+    omega_y, _ = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
     # Flip omega_y, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
     half = nx // 2
