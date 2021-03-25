@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import typing
 import numpy as np
 import scipy.special
+import scipy.optimize
 
 class PrivacyLossDistribution(metaclass=ABCMeta):
 
@@ -108,6 +109,141 @@ class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistributio
 
     def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
         super().get_accountant_parameters(error_tolerance)
+
+class SubsampledGaussianMechanismPrivacyLossDistribution(PrivacyLossDistribution):
+
+    def __init__(self, sigma: float, q: typing.Optional[float] = 1.) -> None:
+        """
+        Args:
+            sigma: Gaussian mechanism noise level for sensitivity 1.
+            q: Subsampling ratio.
+        """
+        self.sigma = sigma
+        self.q = q
+
+    def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
+        """ Determines suitable hyperparameters for the Fourier accountant for a given error tolerance. """
+        raise NotImplementedError()
+
+    @property
+    def privacy_loss_values(self) -> np.ndarray:
+        """ The values of the privacy loss random variable over the DP mechanisms output domain.
+
+        Not ordered and not guaranteed to be free of duplicates.
+        """
+        raise NotImplementedError()
+
+    @property
+    def privacy_loss_probabilities(self) -> np.ndarray:
+        """ The probability mass omega associated with each privacy loss value. """
+        raise NotImplementedError()
+
+    def discretize_privacy_loss_distribution(self, start: float, stop: float, number_of_discretisation_bins: int) -> np.ndarray:
+        """ Computes privacy loss mass function evaluated for equally-sized bins.
+
+        Returns:
+            omega_y_L, omega_y_R: np.ndarray of size `number_of_discretisation_bins`
+        """
+        nx = int(number_of_discretisation_bins)
+
+        Xn, dx = np.linspace(start, stop, nx+1, endpoint=True, retstep=True)
+        assert dx == (stop - start) / nx
+
+        fxs = self.evaluate(Xn) # privacy loss density evaluated at all intervals bounds, including both ends
+        # interval i corresponds to bounds [i, i+1]
+
+        # determine maximum value: since pld is unimodal, must be in the interval left or right of the largest boundary value
+        max_boundary_id = np.argmax(fxs)
+        max_domain_ids = (
+            np.maximum(0, max_boundary_id - 1),
+            np.minimum(nx - 1, max_boundary_id + 1)
+        )
+        max_domain = (np.maximum(np.log(1 - self.q), Xn[max_domain_ids[0]]), Xn[max_domain_ids[1]])
+        opt_result = scipy.optimize.minimize_scalar(lambda x: -self.evaluate(x), bounds=max_domain, method='bounded')
+        assert opt_result.success
+        x_max = opt_result.x    # location of maximum privacy loss density value
+        fx_max = -opt_result.fun # maximum of privacy loss density
+        x_max_idx = int((x_max - start) // dx)
+        assert x_max_idx >= 0 and x_max_idx < nx
+
+        # Majorant for privacy loss density: Maximal value in the interval containing it
+        # and the bound closer to maximum in all other intervals.
+        omega_R = np.zeros(nx) # the max privacy loss density for each of the intervals;
+        omega_R[x_max_idx]      = fx_max
+        omega_R[:x_max_idx]     = fxs[1 : x_max_idx + 1]  # right boundaries for intervals before maximum
+        omega_R[x_max_idx + 1:] = fxs[x_max_idx + 1 : -1] # left boundaries for intervals after maximum
+
+        # Minorant for privacy loss density: smaller bound for interval containing the maximum
+        # and the bound farther from maximum in all other intervals.
+        omega_L = np.zeros(nx) # the min privacy loss density for each of the intervals
+        omega_L[x_max_idx]      = np.min(fxs[x_max_idx:x_max_idx + 2])
+        omega_L[:x_max_idx]     = fxs[:x_max_idx]     # left boundaries for intervals before maximum
+        omega_L[x_max_idx + 1:] = fxs[x_max_idx + 2:] # right boundaries for intervals after maximum
+
+        omega_R *= dx
+        omega_L *= dx
+
+        assert np.all(omega_R >= omega_L)
+
+        return omega_L, omega_R
+
+    def _evaluat_internals(self, x, compute_derivative=False):
+        """ Computes common values for PLD and its derivative. """
+        sigma = self.sigma
+        q = self.q
+
+        mask = x > np.log(1 - q)
+
+        sigma_sq = sigma**2
+        exp_x = np.exp(x[mask])
+        exp_x_m_1mq = exp_x - (1 - q)
+
+        # g(s) in AISTATS2021 paper, Sec. 6.3
+        Linvx = sigma_sq * ( np.log(exp_x_m_1mq) - np.log(q) ) + 0.5
+
+        gauss_exp_term_1mq = np.exp(-Linvx**2 / (2 * sigma_sq))
+        gauss_exp_term_q   = np.exp(-(Linvx-1)**2 / (2 * sigma_sq))
+
+        # f(g(s)) in AISTATS2021 paper, Sec. 6.3
+        ALinvx = ( 1/np.sqrt(2 * np.pi * sigma_sq) ) * (
+            (1 - q) * gauss_exp_term_1mq + q  * gauss_exp_term_q
+        )
+
+        omega = np.zeros_like(x)
+        omega[mask] = ALinvx * dLinvx
+
+        if not compute_derivative:
+            return omega
+
+        dALinvx = -( 1/(np.sqrt(2 * np.pi * sigma_sq) * sigma_sq) ) * (
+            (1 - q) * gauss_exp_term_1mq * Linvx + q * gauss_exp_term_q * (Linvx - 1)
+        )
+
+        dLinvx = sigma_sq * exp_x /  exp_x_m_1mq
+        ddLinvx = sigma_sq * exp_x * (q - 1) / exp_x_m_1mq**2
+
+        domega = np.zeros_like(x)
+        domega[mask] = dALinvx * dLinvx**2 + ALinvx * ddLinvx
+        return omega, domega
+
+    def evaluate(self, x):
+        """ Computes the value of the PLD.
+
+        Following the specification of \omega(s) in Sec. 6.3 of AISTATS21 paper.
+
+        Args:
+            x: Points at which to evaluate the pld
+        """
+        return self._evaluate_internals(x, compute_derivative=False)
+
+    def evaluate_derivative(self, x):
+        """ Computes the value of the derivative of the PLD.
+
+        Args:
+            x: Points at which to evaluate.
+        """
+        return self._evaluate_internals(x, compute_derivative=True)[1]
+
 
 def get_delta_error_term(
         pld: PrivacyLossDistribution,
@@ -238,4 +374,9 @@ def get_delta_lower_bound(
 
 
 if __name__ == '__main__':
-    get_delta_upper_bound(ExponentialMechanismPrivacyLossDistribution(.1, 7, 10))
+    # get_delta_upper_bound(ExponentialMechanismPrivacyLossDistribution(.1, 7, 10))
+
+    q = 0.01
+    sigma = 2
+    get_delta_upper_bound(SubsampledGaussianMechanismPrivacyLossDistribution(sigma, q), target_eps=1., num_compositions=1000, L=50)
+
