@@ -21,8 +21,12 @@ class PrivacyLossDistribution(metaclass=ABCMeta):
         """ The probability mass omega associated with each privacy loss value. """
 
     @abstractmethod
-    def discretize_privacy_loss_distribution(self, start: float, stop: float, step: float) -> np.ndarray:
-        """ Returns the associated probability masses associated with each value of a given discretised interval in privacy loss space. """
+    def discretize_privacy_loss_distribution(self, start: float, stop: float, number_of_discretisation_bins: int) -> np.ndarray:
+        """ Computes privacy loss mass function evaluated for equally-sized bins.
+
+        Returns:
+            omega_y_L, omega_y_R: np.ndarray of size `number_of_discretisation_bins`
+        """
 
 class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
     """ The privacy loss distribution defined by two discrete probability mass functions. """
@@ -159,10 +163,10 @@ def _delta_fft_computations(omegas: np.ndarray, target_eps: float, num_compositi
     assert np.size(fx) == np.size(omegas)
 
     # Compute the DFT
-    FF1 = np.fft.fft(fx)
+    FF1 = np.fft.rfft(fx)
 
     # Take elementwise powers and compute the inverse DFT
-    cfx = np.real(np.fft.ifft((FF1 ** num_compositions)))
+    cfx = np.real(np.fft.irfft((FF1 ** num_compositions)))
 
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     cfx = np.concatenate((cfx[half:], cfx[:half]))
