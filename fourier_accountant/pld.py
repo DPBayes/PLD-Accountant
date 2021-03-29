@@ -77,11 +77,11 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
         nx = number_of_discretisation_bins
         dx = (stop - start) / nx
 
-        Lx = self.privacy_loss_values
+        Lxs = self.privacy_loss_values
         ps = self.privacy_loss_probabilities
 
         omega_y_R = np.zeros(nx)
-        iis = np.ceil((Lx - start) / dx).astype(int)
+        iis = np.ceil((Lxs - start) / dx).astype(int)
         assert np.all((iis >= 0) & (iis < nx))
         np.add.at(omega_y_R, iis, ps)
 
@@ -90,7 +90,7 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
         # which we (probably) don't want
 
         omega_y_L = np.zeros(nx)
-        iis = np.floor((Lx - start) / dx).astype(int)
+        iis = np.floor((Lxs - start) / dx).astype(int)
         assert np.all((iis >= 0) & (iis < nx))
         np.add.at(omega_y_L, iis, ps)
 
@@ -271,8 +271,9 @@ class SubsampledGaussianMechanismPrivacyLossDistribution(PrivacyLossDistribution
         return self._evaluate_internals(x, compute_derivative=True)[1]
 
 
-def get_delta_error_term(
-        pld: PrivacyLossDistribution,
+def _get_delta_error_term(
+        Lxs: typing.Sequence[float],
+        ps: typing.Sequence[float],
         num_compositions: int = 500,
         L: float = 20.0,
         num_discretisation_points: int = int(1E6),
@@ -287,7 +288,8 @@ def get_delta_error_term(
     PMLR 130:3358-3366, 2021.
 
     Args:
-        - pld: The privacy loss distribution of a single application of the privacy mechanism.
+        - Lxs: Sequence of privacy loss values.
+        - ps: Sequence of privacy loss probability masses.
         - num_compositions: The number of compositions (=applications) of the privacy mechanism.
         - L: The truncation threshold (in privacy loss space) used by the accountant.
         - num_discretisation_points: The number of discretisation points used by the accountant.
@@ -297,24 +299,17 @@ def get_delta_error_term(
     if lambd is None:
         lambd = .5 * L
 
-    # Determine the privacy loss values and probabilities
-    if isinstance(pld, DiscretePrivacyLossDistribution):
-        Lx = pld.privacy_loss_values
-        ps = pld.privacy_loss_probabilities
-    else:
-        omega_L, omega_R, Lx = pld.discretize_privacy_loss_distribution(-L, L, num_discretisation_points)
-        ps = omega_R
-
-    assert np.size(ps) == np.size(Lx)
+    assert np.size(ps) == np.size(Lxs)
     nonzero_probability_filter = ~np.isclose(ps, 0)
     ps = ps[nonzero_probability_filter]
-    Lx = Lx[nonzero_probability_filter]
+    Lxs = Lxs[nonzero_probability_filter]
+    assert np.all(ps > 0)
 
     # Compute the lambda-divergence \alpha^+
-    alpha_plus = scipy.special.logsumexp(np.log(ps) + lambd * Lx)
+    alpha_plus = scipy.special.logsumexp(np.log(ps) + lambd * Lxs)
 
     # Compute the lambda-divergence \alpha^-
-    alpha_minus = scipy.special.logsumexp(np.log(ps) - lambd * Lx)
+    alpha_minus = scipy.special.logsumexp(np.log(ps) - lambd * Lxs)
 
     # Evaluate the bound of Thm. 10
     k = num_compositions
@@ -354,7 +349,7 @@ def _delta_fft_computations(omegas: np.ndarray, target_eps: float, num_compositi
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     cfx = np.concatenate((cfx[half:], cfx[:half]))
 
-    # assert np.allclose(np.sum(cfx), 1), "sum over convolved pld is not one!"
+    # assert np.allclose(np.sum(cfx), 1), "sum over convolved pld is not one!" # note(lumip): not for subsampled Gaussian...?
 
     # Evaluate \delta(target_eps)
     x = np.linspace(-L, L, nx, endpoint=False) # grid for the numerical integration
@@ -389,12 +384,24 @@ def get_delta_upper_bound(
     """
     nx = int(num_discretisation_points)
 
-    # Evaluate the bound of Thm. 10
-    error_term = get_delta_error_term(pld, num_compositions, L, nx)
+    # obtain discretized privacy loss densities
+    _, omega_y, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
-    _, omega_y, _ = pld.discretize_privacy_loss_distribution(-L, L, nx)
-
+    # compute delta
     delta = _delta_fft_computations(omega_y, target_eps, num_compositions, L)
+
+    # evaluate the error bound of Thm. 10
+    if isinstance(pld, DiscretePrivacyLossDistribution):
+        # if pld is a DiscretePrivacyLossDistribution we can get
+        #  privacy loss values and corresponding probabilities directly for
+        #  the error computation and don't need to rely on the discretisation
+        #  (which we still need for the FFTs, however)
+        Lxs = pld.privacy_loss_values
+        ps = pld.privacy_loss_probabilities
+    else:
+        ps = omega_y # todo(lumip): which one to use actually?
+
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
     delta += error_term
 
     return delta
@@ -423,11 +430,24 @@ def get_delta_lower_bound(
     """
     nx = int(num_discretisation_points)
 
-    error_term = get_delta_error_term(pld, num_compositions, L, nx)
+    # obtain discretized privacy loss densities
+    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
-    omega_y, _, _ = pld.discretize_privacy_loss_distribution(-L, L, nx)
+    # compute delta
+    delta = _delta_fft_computations(omega_y_L, target_eps, num_compositions, L)
 
-    delta = _delta_fft_computations(omega_y, target_eps, num_compositions, L)
+    # evaluate the error bound of Thm. 10
+    if isinstance(pld, DiscretePrivacyLossDistribution):
+        # if pld is a DiscretePrivacyLossDistribution we can get
+        #  privacy loss values and corresponding probabilities directly for
+        #  the error computation and don't need to rely on the discretisation
+        #  (which we still need for the FFTs, however)
+        Lxs = pld.privacy_loss_values
+        ps = pld.privacy_loss_probabilities
+    else:
+        ps = omega_y_R # todo(lumip): which one to use actually?
+
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
     delta -= error_term
 
     return delta
