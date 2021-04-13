@@ -322,7 +322,7 @@ def _get_delta_error_term(
 
     return error_term
 
-def _delta_fft_computations(omegas: np.ndarray, target_eps: float, num_compositions: int, L: float):
+def _delta_fft_computations(omegas: np.ndarray, num_compositions: int) -> np.ndarray:
     """ Core computation of privacy loss distribution convolutions using FFT. """
     # Flip omegas, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
     nx = len(omegas)
@@ -339,16 +339,31 @@ def _delta_fft_computations(omegas: np.ndarray, target_eps: float, num_compositi
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     cfx = np.concatenate((cfx[half:], cfx[:half]))
 
-    # assert np.allclose(np.sum(cfx), 1), "sum over convolved pld is not one!" # note(lumip): not for subsampled Gaussian...?
+    return cfx # todo(lumip): there are sometimes values < 0, all quite small, probably should be 0 but numerical precision strikes... problem?
 
+def _compute_delta(convolved_omegas: np.ndarray, target_eps: float, L: float, compute_derivative: bool=False):
+    nx = len(convolved_omegas)
     # Evaluate \delta(target_eps)
     x = np.linspace(-L, L, nx, endpoint=False) # grid for the numerical integration
-    exp_e = 1 - np.exp(target_eps - x)
-    integrand = exp_e[exp_e > 0] * cfx[exp_e > 0]
+    integral_mask = x > target_eps
+    x = x[integral_mask]
+    convolved_omegas = convolved_omegas[integral_mask]
+
+    dexp_e = -np.exp(target_eps - x)
+    exp_e = 1 + dexp_e
+    assert np.all(exp_e > 0)
+
+    integrand = exp_e * convolved_omegas
     assert np.all(~(integrand < 0 ) | np.isclose(integrand, 0)), "encountered negative values in pld after composition"
 
-    sum_int = np.sum(integrand)
-    return sum_int
+    delta = np.sum(integrand)
+
+    if not compute_derivative:
+        return delta
+
+    dintegrand = dexp_e * convolved_omegas
+    ddelta = np.sum(dintegrand)
+    return delta, ddelta
 
 def get_delta_upper_bound(
         pld: PrivacyLossDistribution,
@@ -378,7 +393,8 @@ def get_delta_upper_bound(
     _, omega_y, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
     # compute delta
-    delta = _delta_fft_computations(omega_y, target_eps, num_compositions, L)
+    convolved_omegas = _delta_fft_computations(omega_y, num_compositions)
+    delta = _compute_delta(convolved_omegas, target_eps, L)
 
     # evaluate the error bound of Thm. 10
     if isinstance(pld, DiscretePrivacyLossDistribution):
@@ -389,12 +405,14 @@ def get_delta_upper_bound(
         Lxs = pld.privacy_loss_values
         ps = pld.privacy_loss_probabilities
     else:
-        ps = omega_y # todo(lumip): which one to use actually?
+        ps = omega_y # note(lumip): bounds probabilities from above (for truncated region),
+                       # which seems more appropriate for the error term than bounding from below
+                       # todo(all): verify this makes sense
 
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
     delta += error_term
 
-    return delta
+    return np.clip(delta, 0., 1.)
 
 def get_delta_lower_bound(
         pld: PrivacyLossDistribution,
@@ -424,7 +442,8 @@ def get_delta_lower_bound(
     omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
 
     # compute delta
-    delta = _delta_fft_computations(omega_y_L, target_eps, num_compositions, L)
+    convolved_omegas = _delta_fft_computations(omega_y_L, num_compositions)
+    delta = _compute_delta(convolved_omegas, target_eps, L)
 
     # evaluate the error bound of Thm. 10
     if isinstance(pld, DiscretePrivacyLossDistribution):
@@ -435,20 +454,160 @@ def get_delta_lower_bound(
         Lxs = pld.privacy_loss_values
         ps = pld.privacy_loss_probabilities
     else:
-        ps = omega_y_R # todo(lumip): which one to use actually?
+        ps = omega_y_R # note(lumip): bounds probabilities from above (for truncated region),
+                       # which seems more appropriate for the error term than bounding from below
+                       # todo(all): verify this makes sense
 
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
     delta -= error_term
 
-    return delta
+    return np.clip(delta, 0., 1.)
 
+def _compute_epsilon(convolved_omegas: np.ndarray, target_delta: float, tol: float, error_term: float, L: float):
+    """ Given omegas for composed mechanism and a target delta, find epsilon
+        using Newton iteration.
+    """
+    last_epsilon = -np.inf
+    epsilon = 0
+    delta, ddelta = _compute_delta(convolved_omegas, epsilon, L, compute_derivative=True)
+    delta += error_term
+    delta = np.clip(delta, 0., 1.)
+    while np.abs(target_delta - delta) > tol and not np.isclose(epsilon, last_epsilon):
+        f_e = delta - target_delta
+        df_e = ddelta
+        last_epsilon = epsilon
+        epsilon = np.maximum(last_epsilon - f_e/df_e, 0)
+
+        delta, ddelta = _compute_delta(convolved_omegas, epsilon, L, compute_derivative=True)
+        delta += error_term
+        delta = np.clip(delta, 0., 1.)
+
+    return epsilon, delta
+
+class PrivacyException(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+
+def get_epsilon_upper_bound(
+        pld: PrivacyLossDistribution,
+        target_delta: float,
+        num_compositions: int,
+        num_discretisation_points: int = int(1E6),
+        L: float = 20.0,
+        tol: float = 1e-9
+    ):
+    nx = int(num_discretisation_points)
+
+    # obtain discretized privacy loss densities
+    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
+
+    # compute convolved omegas
+    convolved_omegas = _delta_fft_computations(omega_y_R, num_compositions)
+
+    # evaluate the error bound of Thm. 10
+    if isinstance(pld, DiscretePrivacyLossDistribution):
+        # if pld is a DiscretePrivacyLossDistribution we can get
+        #  privacy loss values and corresponding probabilities directly for
+        #  the error computation and don't need to rely on the discretisation
+        #  (which we still need for the FFTs, however)
+        Lxs = pld.privacy_loss_values
+        ps = pld.privacy_loss_probabilities
+    else:
+        ps = omega_y_R # note(lumip): bounds probabilities from above (for truncated region),
+                       # which seems more appropriate for the error term than bounding from below
+                       # todo(all): verify this makes sense
+
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
+
+    epsilon, delta = _compute_epsilon(convolved_omegas, target_delta, tol, error_term, L)
+
+    if epsilon > L: raise ValueError("The evaluation bound L for privacy loss is too small.")
+    if delta > target_delta + tol: raise PrivacyException("Could not find an epsilon for the given target delta.")
+    assert epsilon >= 0., "Computed negative epsilon!"
+
+    return epsilon, delta
+
+def get_epsilon_lower_bound(
+        pld: PrivacyLossDistribution,
+        target_delta: float,
+        num_compositions: int,
+        num_discretisation_points: int = int(1E6),
+        L: float = 20.0,
+        tol: float = 1e-9
+    ):
+    nx = int(num_discretisation_points)
+
+    # obtain discretized privacy loss densities
+    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
+
+    # compute convolved omegas
+    convolved_omegas = _delta_fft_computations(omega_y_L, num_compositions)
+    convolved_higher_omegas = _delta_fft_computations(omega_y_R, num_compositions)
+
+    # evaluate the error bound of Thm. 10
+    if isinstance(pld, DiscretePrivacyLossDistribution):
+        # if pld is a DiscretePrivacyLossDistribution we can get
+        #  privacy loss values and corresponding probabilities directly for
+        #  the error computation and don't need to rely on the discretisation
+        #  (which we still need for the FFTs, however)
+        Lxs = pld.privacy_loss_values
+        ps = pld.privacy_loss_probabilities
+    else:
+        ps = omega_y_R # note(lumip): bounds probabilities from above (for truncated region),
+                       # which seems more appropriate for the error term than bounding from below
+                       # todo(all): verify this makes sense
+
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
+
+    epsilon, delta = _compute_epsilon(convolved_omegas, target_delta, tol, -error_term, L)
+
+    if epsilon > L: raise ValueError("The evaluation bound L for privacy loss is too small.")
+    if delta > target_delta + tol: raise PrivacyException(f"Could not find an epsilon for the given target delta {target_delta}.")
+    assert epsilon >= 0., "Computed negative epsilon!"
+
+    return epsilon, delta
+
+
+def minitest(pld, target_delta, num_compositions):
+    eps_R, delta_eps_R = get_epsilon_upper_bound(pld, target_delta, num_compositions)
+    assert np.isclose(target_delta, delta_eps_R), f"get_epsilon_upper_bound did not achieve target_delta {target_delta}"
+    delta_eps_R_check_R = get_delta_upper_bound(pld, eps_R, num_compositions)
+    assert np.isclose(delta_eps_R_check_R, delta_eps_R), f"computing delta from eps_R did not result in target_delta {target_delta}"
+
+    eps_L, delta_eps_L = get_epsilon_lower_bound(pld, target_delta, num_compositions)
+    assert np.isclose(target_delta, delta_eps_R), f"get_epsilon_lower_bound did not achieve target_delta {target_delta}"
+    delta_eps_L_check_L = get_delta_lower_bound(pld, eps_L, num_compositions)
+    assert np.isclose(delta_eps_L_check_L, delta_eps_L), f"computing delta from eps_L did not result in target_delta {target_delta}"
+    print(f"eps domain for target_delta {target_delta} is [{eps_L}, {eps_R}]")
 
 if __name__ == '__main__':
-    print(get_delta_upper_bound(ExponentialMechanismPrivacyLossDistribution(.1, 7, 10), target_eps=1., num_compositions=1000))
-    print(get_delta_lower_bound(ExponentialMechanismPrivacyLossDistribution(.1, 7, 10), target_eps=1., num_compositions=1000))
+    num_compositions = 1000
+    print("### Exponential Mechanism")
+    em_pld = ExponentialMechanismPrivacyLossDistribution(.1, 7, 10)
+    minitest(em_pld, target_delta=.5, num_compositions=num_compositions)
 
+    print("### Subsampled Gaussian Mechanism")
     q = 0.01
     sigma = 2
-    print(get_delta_upper_bound(SubsampledGaussianMechanismPrivacyLossDistribution(sigma, q), target_eps=1., num_compositions=1000, L=20))
-    print(get_delta_lower_bound(SubsampledGaussianMechanismPrivacyLossDistribution(sigma, q), target_eps=1., num_compositions=1000, L=20))
+    sgm_pld = SubsampledGaussianMechanismPrivacyLossDistribution(sigma, q)
+    minitest(sgm_pld, target_delta=.00001, num_compositions=num_compositions)
+    minitest(sgm_pld, target_delta=0, num_compositions=1) # todo(lumip): getting eps \approx 1, which seems problematic...
+    minitest(sgm_pld, target_delta=1.0, num_compositions=num_compositions)
+
+    # note(lumip): verification with existing experimental and older code
+    print("### comparing code versions")
+    from experimental.subsampled_gaussian_bounds import get_delta_max
+    from compute_delta import get_delta_R, get_delta_S
+
+    target_eps = 0.00001
+    delta = get_delta_upper_bound(sgm_pld, target_eps, num_compositions=1)
+    delta_experimental_code = get_delta_max(target_eps, ncomp=1)
+    delta_old_code_R = get_delta_R(target_eps, ncomp=1)
+    delta_old_code_S = get_delta_S(target_eps, ncomp=1)
+    print(f"new code: {delta}")
+    print(f"experimental code: {delta_experimental_code}")
+    print(f"old code: R relation: {delta_old_code_R}, S relation: {delta_old_code_S}")
+    assert np.isclose(delta_old_code_R, delta)
+
+    print("all successful")
 
