@@ -436,18 +436,7 @@ def get_delta_upper_bound(
     convolved_omegas = _delta_fft_computations(omega_y, num_compositions)
     delta = _compute_delta(convolved_omegas, target_eps, L)
 
-    # evaluate the error bound of Thm. 10
-    if isinstance(pld, DiscretePrivacyLossDistribution):
-        # if pld is a DiscretePrivacyLossDistribution we can get
-        #  privacy loss values and corresponding probabilities directly for
-        #  the error computation and don't need to rely on the discretisation
-        #  (which we still need for the FFTs, however)
-        Lxs = pld.privacy_loss_values
-        ps = pld.privacy_loss_probabilities
-    else:
-        ps = omega_y # note(lumip): bounds probabilities from above (for truncated region),
-                       # which seems more appropriate for the error term than bounding from below
-                       # todo(all): verify this makes sense
+    ps, Lxs = _get_ps_and_Lxs(pld, omega_y, Lxs)
 
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
     delta += error_term
@@ -483,16 +472,7 @@ def get_delta_lower_bound(
     convolved_omegas = _delta_fft_computations(omega_y_L, num_compositions)
     delta = _compute_delta(convolved_omegas, target_eps, L)
 
-    # evaluate the error bound of Thm. 10
-    if isinstance(pld, DiscretePrivacyLossDistribution):
-        # if pld is a DiscretePrivacyLossDistribution we can get
-        #  privacy loss values and corresponding probabilities directly for
-        #  the error computation and don't need to rely on the discretisation
-        #  (which we still need for the FFTs, however)
-        Lxs = pld.privacy_loss_values
-        ps = pld.privacy_loss_probabilities
-    else:
-        ps = omega_y_R # note(lumip): bounds probabilities from above (for truncated region),
+    ps, Lxs = _get_ps_and_Lxs(pld, omega_y_R, Lxs) # note(lumip): bounds probabilities from above (for truncated region),
                        # which seems more appropriate for the error term than bounding from below
                        # todo(all): verify this makes sense
 
@@ -575,19 +555,7 @@ def get_epsilon_upper_bound(
     # compute convolved omegas
     convolved_omegas = _delta_fft_computations(omega_y_R, num_compositions)
 
-    # evaluate the error bound of Thm. 10
-    if isinstance(pld, DiscretePrivacyLossDistribution):
-        # if pld is a DiscretePrivacyLossDistribution we can get
-        #  privacy loss values and corresponding probabilities directly for
-        #  the error computation and don't need to rely on the discretisation
-        #  (which we still need for the FFTs, however)
-        Lxs = pld.privacy_loss_values
-        ps = pld.privacy_loss_probabilities
-    else:
-        ps = omega_y_R # note(lumip): bounds probabilities from above (for truncated region),
-                       # which seems more appropriate for the error term than bounding from below
-                       # todo(all): verify this makes sense
-
+    ps, Lxs = _get_ps_and_Lxs(pld, omega_y_R, Lxs)
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
 
     epsilon, delta = _compute_epsilon(convolved_omegas, target_delta, tol, error_term, L)
@@ -597,6 +565,42 @@ def get_epsilon_upper_bound(
     assert epsilon >= 0., "Computed negative epsilon!"
 
     return epsilon, delta
+
+def _get_ps_and_Lxs(
+        pld: PrivacyLossDistribution, omegas: np.ndarray, omega_Lxs: np.ndarray
+    ) -> typing.Tuple[np.ndarray, np.ndarray]:
+    """ Get the best representation of privacy loss probability mass for computing
+        error term.
+
+    For computation of the delta error term, these are not required to be discretised
+    to regular intervals, so more efficient representations are possible.
+
+    Args:
+        - pld: Privacy loss distribution instance.
+        - omegas: Discretized privacy loss probability masses.
+        - omega_Lxs: Probability loss values corresponding to positions in `omegas`.
+
+    Returns:
+        - ps: Probability mass function for privacy loss values.
+        - Lxs: The corresponding privacy loss values.
+    """
+    # todo(lumip): This should ideally be bundled in the error computation,
+    #   but that would make that function's interface quite bloated, which indicates
+    #   it should be part of PLD classes. However, that would in turn strongly
+    #   couple those with the accountant computations - tricky...
+
+    if isinstance(pld, DiscretePrivacyLossDistribution):
+        # if pld is a DiscretePrivacyLossDistribution we can get
+        #  privacy loss values and corresponding probabilities directly for
+        #  the error computation and don't need to rely on the discretisation.
+        # these will typically be smaller arrays and thus faster to compute on.
+        Lxs = pld.privacy_loss_values
+        ps = pld.privacy_loss_probabilities
+    else:
+        ps = omegas
+        Lxs = omega_Lxs
+
+    return ps, Lxs
 
 def get_epsilon_lower_bound(
         pld: PrivacyLossDistribution,
@@ -630,18 +634,7 @@ def get_epsilon_lower_bound(
     # compute convolved omegas
     convolved_omegas = _delta_fft_computations(omega_y_L, num_compositions)
 
-    # evaluate the error bound of Thm. 10
-    if isinstance(pld, DiscretePrivacyLossDistribution):
-        # if pld is a DiscretePrivacyLossDistribution we can get
-        #  privacy loss values and corresponding probabilities directly for
-        #  the error computation and don't need to rely on the discretisation
-        #  (which we still need for the FFTs, however)
-        Lxs = pld.privacy_loss_values
-        ps = pld.privacy_loss_probabilities
-    else:
-        ps = omega_y_R # note(lumip): bounds probabilities from above (for truncated region),
-                       # which seems more appropriate for the error term than bounding from below
-                       # todo(all): verify this makes sense
+    ps, Lxs = _get_ps_and_Lxs(pld, omega_y_R, Lxs)
 
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
 
@@ -678,7 +671,7 @@ if __name__ == '__main__':
     sgm_pld = SubsampledGaussianMechanism(sigma, q)
     minitest(sgm_pld, target_delta=.00001, num_compositions=num_compositions)
     minitest(sgm_pld, target_delta=0, num_compositions=num_compositions)
-    # minitest(sgm_pld, target_delta=1.0, num_compositions=num_compositions) # don't get there, eps=0 -> target_delta < 1
+    minitest(sgm_pld, target_delta=.4, num_compositions=num_compositions)
 
     # note(lumip): verification with existing experimental and older code
     print("### comparing code versions")
