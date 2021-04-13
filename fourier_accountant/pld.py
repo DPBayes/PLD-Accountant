@@ -282,10 +282,8 @@ def _get_delta_error_term(
     """ Computes the total error term for δ computed by the Fourier accountant
     for repeated application of a privacy mechanism.
 
-    The computation follows Theorem 10 in Koskela et al., "Tight Differential Privacy
-    for Discrete-Valued Mechanisms and for the Subsampled Gaussian Mechanism Using FFT",
-    Proceedings of The 24th International Conference on Artificial Intelligence and Statistics,
-    PMLR 130:3358-3366, 2021.
+    The computation follows Theorem 7 in Koskela & Honkela, "Computing Differential Privacy for
+    Heterogeneous Compositions Using FFT", 2021, arXiv preprint, https://arxiv.org/abs/2102.12412 .
 
     Args:
         - Lxs: Sequence of privacy loss values.
@@ -311,20 +309,12 @@ def _get_delta_error_term(
     # Compute the lambda-divergence \alpha^-
     alpha_minus = scipy.special.logsumexp(np.log(ps) - lambd * Lxs)
 
-    # Evaluate the bound of Thm. 10
     k = num_compositions
 
     common_factor_log = -(L * lambd + np.log1p(-np.exp(-2 * L * lambd)))
 
-    T1_log_num = (k+1) * alpha_plus + np.log(2) + np.log1p(-.5*(np.exp(-alpha_plus) + np.exp(-k * alpha_plus)))
-    T1_log_denom = alpha_plus + np.log1p(-np.exp(-alpha_plus))
-
-    T1_log = T1_log_num - T1_log_denom + common_factor_log
-
-    T2_log_num = (k+1) * alpha_minus + np.log1p(-np.exp(-k * alpha_minus))
-    T2_log_denom = alpha_minus + np.log1p(-np.exp(-alpha_minus))
-
-    T2_log = T2_log_num - T2_log_denom + common_factor_log
+    T1_log = k * alpha_plus + common_factor_log
+    T2_log = k * alpha_minus + common_factor_log
 
     T_max_log = np.maximum(T1_log, T2_log)
 
