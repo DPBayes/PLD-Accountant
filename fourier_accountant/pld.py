@@ -10,17 +10,32 @@ class PrivacyLossDistribution(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
+    def get_accountant_parameters(self, error_tolerance: float) -> typing.Tuple[float, float, int]:
         """ Determines suitable hyperparameters for the Fourier accountant
         for a given error tolerance.
+
+        Args:
+            - error_tolerance (float): The tolerance for error in approximations
+                of bounds for delta.
+
+        Returns:
+            - L: Bound for the privacy loss interval to evaluate.
+            - lambd: Parameter lambda for error bound computation.
+            - nx: Number of discretization bins.
         """
 
     @abstractmethod
     def discretize_privacy_loss_distribution(self,
-            start: float, stop: float, number_of_discretisation_bins: int
-        ) -> np.ndarray:
+            start: float, stop: float, num_discretisation_bins_half: int
+        ) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Computes the privacy loss probability mass function evaluated for
         equally-sized discrete bins.
+
+        Args:
+            - start: Starting value for discretisation interval in privacy loss domain.
+            - stop: (Exclusive) end value for discretisation interval in privacy loss domain.
+            - num_discretisation_bins_half: The number of discretisation bins in the
+                interval, divided by 2.
 
         Returns:
             - omega_y_L: np.ndarray of size `number_of_discretisation_bins`
@@ -55,7 +70,7 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
         self._p1 = np.array(p1)
         self._p2 = np.array(p2)
 
-    def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
+    def get_accountant_parameters(self, error_tolerance: float) -> typing.Tuple[float, float, int]:
         raise NotImplementedError()
 
     @property
@@ -72,9 +87,9 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
         return self._p1
 
     def discretize_privacy_loss_distribution(self,
-            start: float, stop: float, number_of_discretisation_bins: int
-        ) -> np.ndarray:
-        nx = number_of_discretisation_bins
+            start: float, stop: float, num_discretisation_bins_half: int
+        ) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        nx = 2 * num_discretisation_bins_half
         dx = (stop - start) / nx
 
         Lxs = self.privacy_loss_values
@@ -97,14 +112,14 @@ class DiscretePrivacyLossDistribution(PrivacyLossDistribution):
         Xn = np.linspace(start, stop, nx, endpoint=False)
         return omega_y_L, omega_y_R, Xn
 
-class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistribution):
+class ExponentialMechanism(DiscretePrivacyLossDistribution):
     """ The privacy loss distribution of the exponential mechanism
     where the quality score is a counting query.
     """
 
     def __init__(self, eps_em: float, m: int, n: int) -> None:
         """
-        Creates an instance of the ExponentialMechanismPrivacyLossDistribution.
+        Creates an instance of the ExponentialMechanism.
 
         Args:
             eps_em: The epsilon value of the mechanism under composition.
@@ -122,11 +137,11 @@ class ExponentialMechanismPrivacyLossDistribution(DiscretePrivacyLossDistributio
     def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
         super().get_accountant_parameters(error_tolerance)
 
-class SubsampledGaussianMechanismPrivacyLossDistribution(PrivacyLossDistribution):
+class SubsampledGaussianMechanism(PrivacyLossDistribution):
     """ The privacy loss distribution of the subsampled Gaussian mechanism
     with noise σ², subsampling ratio q.
 
-    It is assumed that the provided noise level correspond to a sensitivity
+    It is assumed that the provided noise level corresponds to a sensitivity
     of the mechanism of 1.
     """
 
@@ -136,17 +151,19 @@ class SubsampledGaussianMechanismPrivacyLossDistribution(PrivacyLossDistribution
             sigma: Gaussian mechanism noise level for sensitivity 1.
             q: Subsampling ratio.
         """
-        self.sigma = sigma
+        self.sigma = np.abs(sigma)
         self.q = q
+        if self.q < 0 or self.q > 1:
+            raise ValueError(f"Subsampling ratio q must be between 0 and 1, was {q}.")
 
-    def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
-        """ Determines suitable hyperparameters for the Fourier accountant for a given error tolerance. """
+
+    def get_accountant_parameters(self, error_tolerance: float) -> typing.Tuple[float, float, int]:
         raise NotImplementedError()
 
     def discretize_privacy_loss_distribution(self,
-            start: float, stop: float, number_of_discretisation_bins: int
-        ) -> np.ndarray:
-        nx = int(number_of_discretisation_bins)
+            start: float, stop: float, num_discretisation_bins_half: int
+        ) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        nx = int(2 * num_discretisation_bins_half)
 
         Xn, dx = np.linspace(start, stop, nx+1, endpoint=True, retstep=True)
         assert dx == (stop - start) / nx
@@ -194,7 +211,7 @@ class SubsampledGaussianMechanismPrivacyLossDistribution(PrivacyLossDistribution
 
     def _evaluate_internals(self,
             x: typing.Sequence[float], compute_derivative: typing.Optional[bool]=False
-        ) -> np.ndarray:
+        ) -> typing.Union[np.array, typing.Tuple[np.array, np.array]]:
         """ Computes common values for PLD and its derivative.
 
         Args:
@@ -276,9 +293,8 @@ def _get_delta_error_term(
         ps: typing.Sequence[float],
         num_compositions: int = 500,
         L: float = 20.0,
-        num_discretisation_points: int = int(1E6),
         lambd: typing.Optional[float] = None
-    ):
+    ) -> float:
     """ Computes the total error term for δ computed by the Fourier accountant
     for repeated application of a privacy mechanism.
 
@@ -290,7 +306,6 @@ def _get_delta_error_term(
         - ps: Sequence of privacy loss probability masses.
         - num_compositions: The number of compositions (=applications) of the privacy mechanism.
         - L: The truncation threshold (in privacy loss space) used by the accountant.
-        - num_discretisation_points: The number of discretisation points used by the accountant.
         - lambd: The parameter λ for error estimation.
     """
 
@@ -323,9 +338,20 @@ def _get_delta_error_term(
     return error_term
 
 def _delta_fft_computations(omegas: np.ndarray, num_compositions: int) -> np.ndarray:
-    """ Core computation of privacy loss distribution convolutions using FFT. """
+    """ Core computation of privacy loss distribution convolutions using FFT.
+
+    Args:
+        - omegas: Numpy array of probability masses omega for discrete bins of privacy loss values
+            for a single invocation of a privacy mechanism.
+        - num_compositions: The number of sequential invocations of the privacy mechanism.
+    Returns:
+        - Numpy array of probability masses for the discrete bins of privacy loss values
+            after `num_compositions` sequential invocations of the privacy mechanisms
+            characterized by `omegas`.
+    """
     # Flip omegas, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
     nx = len(omegas)
+    assert nx % 2 == 0
     half = nx // 2
     fx = np.concatenate((omegas[half:], omegas[:half]))
     assert np.size(fx) == np.size(omegas)
@@ -341,7 +367,23 @@ def _delta_fft_computations(omegas: np.ndarray, num_compositions: int) -> np.nda
 
     return cfx # todo(lumip): there are sometimes values < 0, all quite small, probably should be 0 but numerical precision strikes... problem?
 
-def _compute_delta(convolved_omegas: np.ndarray, target_eps: float, L: float, compute_derivative: bool=False):
+def _compute_delta(
+        convolved_omegas: np.ndarray, target_eps: float, L: float, compute_derivative: bool=False
+    ) -> typing.Union[float, typing.Tuple[float, float]]:
+    """ Compute delta from privacy loss probability masses.
+
+    Args:
+        - convolved_omegas: Numpy array of probability masses after convolving all
+            privacy mechanism invocations.
+        - target_eps: The targeted epsilon to compute delta for.
+        - L: The bound for the discretisation interval.
+        - compute_derivative: If True, additionally return the derivative of delta with
+            respect to epsilon.
+
+    Returns:
+        - delta: The computed delta.
+        - ddelta (Optional, if `compute_derivative = True`): The derivative of delta wrt epsilon.
+    """
     nx = len(convolved_omegas)
     # Evaluate \delta(target_eps)
     x = np.linspace(-L, L, nx, endpoint=False) # grid for the numerical integration
@@ -369,7 +411,7 @@ def get_delta_upper_bound(
         pld: PrivacyLossDistribution,
         target_eps: float,
         num_compositions: int,
-        num_discretisation_points: int = int(1E6),
+        num_discretisation_bins_half: int = int(1E6),
         L: float = 20.0
     ):
     """ Computes the upper bound for privacy parameter δ for repeated application
@@ -382,15 +424,13 @@ def get_delta_upper_bound(
 
     Args:
         - pld: The privacy loss distribution of a single application of the privacy mechanism.
-        - target_eps: The privacy parameters ε for which to compute δ.
+        - target_eps: The privacy parameter ε for which to compute δ.
         - num_compositions: The number of compositions (=applications) of the privacy mechanism.
-        - num_discretisation_points: The number of discretisation points used by the accountant.
+        - num_discretisation_bins_half: The number of discretisation bins used by the accountant, divided by 2.
         - L: The truncation threshold (in privacy loss space) used by the accountant.
     """
-    nx = int(num_discretisation_points)
-
     # obtain discretized privacy loss densities
-    _, omega_y, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
+    _, omega_y, Lxs = pld.discretize_privacy_loss_distribution(-L, L, num_discretisation_bins_half)
 
     # compute delta
     convolved_omegas = _delta_fft_computations(omega_y, num_compositions)
@@ -409,7 +449,7 @@ def get_delta_upper_bound(
                        # which seems more appropriate for the error term than bounding from below
                        # todo(all): verify this makes sense
 
-    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
     delta += error_term
 
     return np.clip(delta, 0., 1.)
@@ -418,7 +458,7 @@ def get_delta_lower_bound(
         pld: PrivacyLossDistribution,
         target_eps: float,
         num_compositions: int,
-        num_discretisation_points: int = int(1E6),
+        num_discretisation_bins_half: int = int(1E6),
         L: float = 20.0
     ):
     """ Computes the lower bound for privacy parameter δ for repeated application
@@ -431,15 +471,13 @@ def get_delta_lower_bound(
 
     Args:
         - pld: The privacy loss distribution of a single application of the privacy mechanism.
-        - target_eps: The privacy parameters ε for which to compute δ.
+        - target_eps: The privacy parameter ε for which to compute δ.
         - num_compositions: The number of compositions (=applications) of the privacy mechanism.
-        - num_discretisation_points: The number of discretisation points used by the accountant.
+        - num_discretisation_bins_half: The number of discretisation bins used by the accountant, divided by 2.
         - L: The truncation threshold (in privacy loss space) used by the accountant.
     """
-    nx = int(num_discretisation_points)
-
     # obtain discretized privacy loss densities
-    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
+    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, num_discretisation_bins_half)
 
     # compute delta
     convolved_omegas = _delta_fft_computations(omega_y_L, num_compositions)
@@ -458,15 +496,30 @@ def get_delta_lower_bound(
                        # which seems more appropriate for the error term than bounding from below
                        # todo(all): verify this makes sense
 
-    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
     delta -= error_term
 
     return np.clip(delta, 0., 1.)
 
-def _compute_epsilon(convolved_omegas: np.ndarray, target_delta: float, tol: float, error_term: float, L: float):
-    """ Given omegas for composed mechanism and a target delta, find epsilon
-        using Newton iteration.
+def _compute_epsilon(
+        convolved_omegas: np.ndarray, target_delta: float, tol: float, error_term: float, L: float
+    ) -> typing.Tuple[float, float]:
+    """ Find epsilon using Newton iteration on delta computation for given probability masses.
+
+    Args:
+        - convolved_omegas: Numpy array of probability masses after convolving all
+            privacy mechanism invocations.
+        - target_delta: The targeted delta to compute epsilon for.
+        - tol: Optimisation cutoff threshold for epsilon.
+        - error_term: Delta error term.
+        - L: The bound for the discretisation interval.
+
+    Returns:
+        - epsilon: The computed value for epsilon.
+        - delta: The value of delta corresponding to epsilon. Might differ from
+            `target_delta` if a suitable epsilon for `target_delta` cannot be found.
     """
+
     last_epsilon = -np.inf
     epsilon = 0
     delta, ddelta = _compute_delta(convolved_omegas, epsilon, L, compute_derivative=True)
@@ -485,6 +538,8 @@ def _compute_epsilon(convolved_omegas: np.ndarray, target_delta: float, tol: flo
     return epsilon, delta
 
 class PrivacyException(Exception):
+    """ An exception indicating a violation of privacy constraints. """
+
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
 
@@ -492,14 +547,30 @@ def get_epsilon_upper_bound(
         pld: PrivacyLossDistribution,
         target_delta: float,
         num_compositions: int,
-        num_discretisation_points: int = int(1E6),
+        num_discretisation_bins_half: int = int(1E6),
         L: float = 20.0,
         tol: float = 1e-9
     ):
-    nx = int(num_discretisation_points)
+    """ Computes the upper bound for privacy parameter ε for repeated application
+    of a privacy mechanism.
 
+    The computation optimizes for ε iteratively using the Newton method on
+    the Fourier accountant for computing an upper bound for δ.
+    The accountant is described in Koskela et al.,
+    "Tight Differential Privacy for Discrete-Valued Mechanisms and for the Subsampled
+    Gaussian Mechanism Using FFT", Proceedings of The 24th International Conference
+    on Artificial Intelligence and Statistics, PMLR 130:3358-3366, 2021.
+
+    Args:
+        - pld: The privacy loss distribution of a single application of the privacy mechanism.
+        - target_delta: The privacy parameter δ for which to compute ε.
+        - num_compositions: The number of compositions (=applications) of the privacy mechanism.
+        - num_discretisation_bins_half: The number of discretisation bins used by the accountant, divided by 2.
+        - L: The truncation threshold (in privacy loss space) used by the accountant.
+        - tol: Error tolerance for ε.
+    """
     # obtain discretized privacy loss densities
-    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
+    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, num_discretisation_bins_half)
 
     # compute convolved omegas
     convolved_omegas = _delta_fft_computations(omega_y_R, num_compositions)
@@ -517,7 +588,7 @@ def get_epsilon_upper_bound(
                        # which seems more appropriate for the error term than bounding from below
                        # todo(all): verify this makes sense
 
-    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
 
     epsilon, delta = _compute_epsilon(convolved_omegas, target_delta, tol, error_term, L)
 
@@ -531,18 +602,33 @@ def get_epsilon_lower_bound(
         pld: PrivacyLossDistribution,
         target_delta: float,
         num_compositions: int,
-        num_discretisation_points: int = int(1E6),
+        num_discretisation_bins_half: int = int(1E6),
         L: float = 20.0,
         tol: float = 1e-9
     ):
-    nx = int(num_discretisation_points)
+    """ Computes the lower bound for privacy parameter ε for repeated application
+    of a privacy mechanism.
 
+    The computation optimizes for ε iteratively using the Newton method on
+    the Fourier accountant for computing a lower bound for δ.
+    The accountant is described in Koskela et al.,
+    "Tight Differential Privacy for Discrete-Valued Mechanisms and for the Subsampled
+    Gaussian Mechanism Using FFT", Proceedings of The 24th International Conference
+    on Artificial Intelligence and Statistics, PMLR 130:3358-3366, 2021.
+
+    Args:
+        - pld: The privacy loss distribution of a single application of the privacy mechanism.
+        - target_delta: The privacy parameter δ for which to compute ε.
+        - num_compositions: The number of compositions (=applications) of the privacy mechanism.
+        - num_discretisation_bins_half: The number of discretisation bins used by the accountant, divided by 2.
+        - L: The truncation threshold (in privacy loss space) used by the accountant.
+        - tol: Error tolerance for ε.
+    """
     # obtain discretized privacy loss densities
-    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, nx)
+    omega_y_L, omega_y_R, Lxs = pld.discretize_privacy_loss_distribution(-L, L, num_discretisation_bins_half)
 
     # compute convolved omegas
     convolved_omegas = _delta_fft_computations(omega_y_L, num_compositions)
-    convolved_higher_omegas = _delta_fft_computations(omega_y_R, num_compositions)
 
     # evaluate the error bound of Thm. 10
     if isinstance(pld, DiscretePrivacyLossDistribution):
@@ -557,7 +643,7 @@ def get_epsilon_lower_bound(
                        # which seems more appropriate for the error term than bounding from below
                        # todo(all): verify this makes sense
 
-    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L, nx)
+    error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
 
     epsilon, delta = _compute_epsilon(convolved_omegas, target_delta, tol, -error_term, L)
 
@@ -583,16 +669,16 @@ def minitest(pld, target_delta, num_compositions):
 if __name__ == '__main__':
     num_compositions = 1000
     print("### Exponential Mechanism")
-    em_pld = ExponentialMechanismPrivacyLossDistribution(.1, 7, 10)
+    em_pld = ExponentialMechanism(.1, 7, 10)
     minitest(em_pld, target_delta=.5, num_compositions=num_compositions)
 
     print("### Subsampled Gaussian Mechanism")
     q = 0.01
     sigma = 2
-    sgm_pld = SubsampledGaussianMechanismPrivacyLossDistribution(sigma, q)
+    sgm_pld = SubsampledGaussianMechanism(sigma, q)
     minitest(sgm_pld, target_delta=.00001, num_compositions=num_compositions)
-    minitest(sgm_pld, target_delta=0, num_compositions=1) # todo(lumip): getting eps \approx 1, which seems problematic...
-    minitest(sgm_pld, target_delta=1.0, num_compositions=num_compositions)
+    minitest(sgm_pld, target_delta=0, num_compositions=num_compositions)
+    # minitest(sgm_pld, target_delta=1.0, num_compositions=num_compositions) # don't get there, eps=0 -> target_delta < 1
 
     # note(lumip): verification with existing experimental and older code
     print("### comparing code versions")
