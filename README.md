@@ -9,12 +9,12 @@ Computing Tight Differential Privacy Guarantees Using FFT
 International Conference on Artificial Intelligence and Statistics (2020)
 
 Antti Koskela, Joonas Jälkö, Lukas Prediger, Antti Honkela:  
-Tight Differential Privacy for Discrete-Valued Mechanisms and for the Subsampled Gaussian Mechanism Using FFT
-International Conference on Artificial Intelligence and Statistics (2021)
+Tight Differential Privacy for Discrete-Valued Mechanisms and for the Subsampled Gaussian Mechanism Using FFT  
+International Conference on Artificial Intelligence and Statistics (2021)  
 
-Antti Koskela, Antti Honkela:
-Computing Differential Privacy Guarantees for Heterogeneous Compositions Using FFT
-arXiv preprint arXiv:2102.12412
+Antti Koskela, Antti Honkela:  
+Computing Differential Privacy Guarantees for Heterogeneous Compositions Using FFT  
+arXiv preprint arXiv:2102.12412  
 
 
 # API and Usage
