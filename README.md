@@ -8,11 +8,14 @@ The method is described in
 "Computing Tight Differential Privacy Guarantees Using FFT",
 International Conference on Artificial Intelligence and Statistics (2020)
 
-and
-
 [2]: Antti Koskela, Joonas Jälkö, Lukas Prediger, Antti Honkela:
 "Tight Differential Privacy for Discrete-Valued Mechanisms and for the Subsampled Gaussian Mechanism Using FFT",
-Proceedings of The 24th International Conference on Artificial Intelligence and Statistics, PMLR 130:3358-3366, 2021
+International Conference on Artificial Intelligence and Statistics (2021)
+
+[3]: Antti Koskela, Antti Honkela:
+"Computing Differential Privacy Guarantees for Heterogeneous Compositions Using FFT",
+arXiv preprint arXiv:2102.12412
+
 
 # API and Usage
 
@@ -36,6 +39,9 @@ Outdated API for subsampled Gaussian only:
     Computes the DP epsilon for the remove/add neighbouring relation of datasets.
 - `get_epsilon_S(target_delta, sigma, q, ncomp, nx, L)`
     Computes the DP epsilon for the substitute neighbouring relation of datasets.
+
+The `experimental` module contains preliminary implementations for the above papers that
+are not yet integrated into the main API.
 
 ## Important Parameters for the Accountant
 - `target_eps` (`float`): Target ε to compute δ for.
