@@ -14,7 +14,7 @@ International Conference on Artificial Intelligence and Statistics (2021)
 
 [3]: Antti Koskela, Antti Honkela:
 "Computing Differential Privacy Guarantees for Heterogeneous Compositions Using FFT",
-arXiv preprint arXiv:2102.12412
+arXiv preprint arXiv:2102.12412 (2021)
 
 
 # API and Usage
