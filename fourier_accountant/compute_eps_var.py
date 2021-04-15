@@ -16,7 +16,7 @@ was refactored by Lukas Prediger (@lumip) .
 
 import numpy as np
 import warnings
-from .compute_eps import get_epsilon_R as get_epsilon_R_new, get_epsilon_S as get_epsilon_S_new
+from fourier_accountant.compute_eps import get_epsilon_R as get_epsilon_R_new, get_epsilon_S as get_epsilon_S_new
 
 __all__ = ['get_epsilon_R', 'get_epsilon_S']
 

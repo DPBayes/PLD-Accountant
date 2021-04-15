@@ -15,7 +15,7 @@ was refactored by Lukas Prediger (@lumip) .
 
 import numpy as np
 from typing import Union
-from .common import _evaluate_pld
+from fourier_accountant.common import _evaluate_pld
 
 __all__ = ['get_delta_R', 'get_delta_S']
 

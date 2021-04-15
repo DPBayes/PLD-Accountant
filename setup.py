@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="fourier_accountant",
-    version="0.12.0",
+    version="0.13.0-alpha",
     author="Antti Koskela",
     author_email="anttik123@gmail.com",
     description="Fourier Accountant for Differential Privacy ",
@@ -16,7 +16,7 @@ setuptools.setup(
     url="https://github.com/DPBayes/PLD-Accountant",
     packages=setuptools.find_packages(include=['fourier_accountant', 'fourier_accountant.*']),
     install_requires=[
-        'numpy'
+        'numpy', 'scipy'
     ],
     classifiers=[
         'Intended Audience :: Science/Research',
