@@ -3,6 +3,7 @@ import typing
 import numpy as np
 import scipy.special
 import scipy.optimize
+from enum import Enum
 
 class PrivacyLossDistribution(metaclass=ABCMeta):
     """ The distribution of the privacy loss resulting from application
@@ -137,24 +138,38 @@ class ExponentialMechanism(DiscretePrivacyLossDistribution):
     def get_accountant_parameters(self, error_tolerance: float) -> typing.Any:
         super().get_accountant_parameters(error_tolerance)
 
+
+class NeighborRelation(Enum):
+    REMOVE_POISSON = 'remove-poisson'
+    SUBSTITUTE_NO_REPLACE = 'substitute-no-replace'
+
 class SubsampledGaussianMechanism(PrivacyLossDistribution):
     """ The privacy loss distribution of the subsampled Gaussian mechanism
     with noise σ², subsampling ratio q.
 
     It is assumed that the provided noise level corresponds to a sensitivity
-    of the mechanism of 1.
+    of the mechanism of 1 in remove relation.
     """
 
-    def __init__(self, sigma: float, q: typing.Optional[float] = 1.) -> None:
+    def __init__(self,
+            sigma: float, q: typing.Optional[float] = 1., relation: NeighborRelation = NeighborRelation.REMOVE_POISSON
+        ) -> None:
         """
         Args:
-            sigma: Gaussian mechanism noise level for sensitivity 1.
-            q: Subsampling ratio.
+            - sigma: Gaussian mechanism noise level for sensitivity 1.
+            - q: Subsampling ratio.
         """
         self.sigma = np.abs(sigma)
         self.q = q
+        self._evaluate_internals = None
         if self.q < 0 or self.q > 1:
             raise ValueError(f"Subsampling ratio q must be between 0 and 1, was {q}.")
+        if relation == NeighborRelation.REMOVE_POISSON:
+            self._evaluate_internals = self._evaluate_internals_remove_relation
+        elif relation == NeighborRelation.SUBSTITUTE_NO_REPLACE:
+            self._evaluate_internals = self._evaluate_internals_substitute_relation
+        else:
+            raise ValueError("Unknown neighboring relation given.")
 
 
     def get_accountant_parameters(self, error_tolerance: float) -> typing.Tuple[float, float, int]:
@@ -209,7 +224,7 @@ class SubsampledGaussianMechanism(PrivacyLossDistribution):
 
         return omega_L, omega_R, Xn[:-1]
 
-    def _evaluate_internals(self,
+    def _evaluate_internals_remove_relation(self,
             x: typing.Sequence[float], compute_derivative: typing.Optional[bool]=False
         ) -> typing.Union[np.array, typing.Tuple[np.array, np.array]]:
         """ Computes common values for PLD and its derivative.
@@ -228,7 +243,12 @@ class SubsampledGaussianMechanism(PrivacyLossDistribution):
         sigma = self.sigma
         q = self.q
 
-        mask = x > np.log(1 - q)
+        mask = np.ones_like(x, dtype=bool)
+        if q < 1:
+            mask = x > np.log(1 - q)
+            # note(lumip): actually we'd be fine with q=1 computing log(1-q)=-inf
+            #   giving us the full mask, but numpy will spam warnings, which
+            #   would confuse users, therefore this construct is necessary
 
         sigma_sq = sigma**2
         exp_x = np.exp(x[mask])
@@ -263,6 +283,57 @@ class SubsampledGaussianMechanism(PrivacyLossDistribution):
         domega = np.zeros_like(x)
         domega[mask] = dALinvx * dLinvx**2 + ALinvx * ddLinvx
         return omega, domega
+
+    def _evaluate_internals_substitute_relation(self,
+            x: typing.Sequence[float], compute_derivative: typing.Optional[bool]=False
+        ) -> typing.Union[np.array, typing.Tuple[np.array, np.array]]:
+        sigma = self.sigma
+        q = self.q
+
+        mask = np.ones_like(x, dtype=bool)
+        if q < 1:
+            mask = x > np.log(1 - q)
+
+        sigma_sq = sigma**2
+        exp_x = np.exp(x[mask])
+
+        c = q * np.exp( -1 / (2 * sigma_sq) )
+        c_sq_exp_x_4 = 4 * c**2 * exp_x
+
+        sqrtpart = np.sqrt( ((1 - q) * (1 - exp_x))**2 + c_sq_exp_x_4 )
+        logpart = ( sqrtpart - (1 - q) * (1 - exp_x) ) / (2 * c)
+        assert np.all(logpart > 0.)
+        Linvx = sigma_sq * np.log(logpart) # L^{-1}(s)
+
+        # note: straightforward implementation of derivative dLinvx:
+        # dlogpart_left = ((1 - q) * exp_x) / (2 * c)
+        # dlogpart_right = c_sq_exp_x_4 - 2 * (1 - q)**2 * exp_x * (1 - exp_x)
+        # dlogpart_right /= (4 * c * sqrtpart)
+        # dLinvx = (sigma_sq / logpart) * (dlogpart_left + dlogpart_right)
+
+        # note: slightly massages implementation of derivative dLinvx:
+        dsqrtpart = c_sq_exp_x_4 - 2 * (1 - q)**2 * exp_x * (1 - exp_x)
+        dsqrtpart /= 2*sqrtpart
+        dlogpart = (1 - q) * exp_x + dsqrtpart # without factor 2*c
+        # note: outer derivative of log would now require division by logpart,
+        #       but for stability we multiply numerator and denominator by
+        #       sqrtpart + (1-q) * (1-exp_x) to get the below
+        dlogpart_multiplied = dlogpart * (sqrtpart + (1 - q) * (1 - exp_x))
+        dLinvx = sigma_sq * dlogpart_multiplied / c_sq_exp_x_4 # d/ds L^{-1}(s)
+
+        # f_X(L^{-1}(s)):
+        ALinvx = (1 / np.sqrt(2 * np.pi * sigma**2) ) * (
+                    (1 - q) * np.exp(-Linvx**2     / (2 * sigma_sq)) +
+                    q *       np.exp(-(Linvx-1)**2 / (2 * sigma_sq))
+            )
+
+        omega = np.zeros_like(x)
+        omega[mask] = ALinvx * dLinvx
+
+        if not compute_derivative:
+            return omega
+
+        raise NotImplementedError("Derivative for substitute relation currently not implemented.")
 
     def evaluate(self, x: typing.Sequence[float]) -> np.ndarray:
         """ Evaluates the probability densitiy function.
@@ -665,13 +736,20 @@ if __name__ == '__main__':
     em_pld = ExponentialMechanism(.1, 7, 10)
     minitest(em_pld, target_delta=.5, num_compositions=num_compositions)
 
-    print("### Subsampled Gaussian Mechanism")
+    print("### Subsampled Gaussian Mechanism, remove relation")
     q = 0.01
     sigma = 2
     sgm_pld = SubsampledGaussianMechanism(sigma, q)
+    t = np.linspace(-10, 10, 501, endpoint=True)
+
     minitest(sgm_pld, target_delta=.00001, num_compositions=num_compositions)
     minitest(sgm_pld, target_delta=0, num_compositions=num_compositions)
     minitest(sgm_pld, target_delta=.4, num_compositions=num_compositions)
+
+    print("### Subsampled Gaussian Mechanism, substitute relation")
+    sgm_sub_pld = SubsampledGaussianMechanism(sigma, q, NeighborRelation.SUBSTITUTE_NO_REPLACE)
+    minitest(sgm_sub_pld, target_delta=0, num_compositions=num_compositions)
+    # note(lumip): for 1000 comps, substitution gives very small delta for eps=0 already; how to test?
 
     # note(lumip): verification with existing experimental and older code
     print("### comparing code versions")
