@@ -16,8 +16,8 @@ was refactored by Lukas Prediger (@lumip) .
 
 import numpy as np
 import warnings
-from .compute_delta import get_delta_R as get_delta_R_new
-from .compute_delta import get_delta_S as get_delta_S_new
+from fourier_accountant.compute_delta import get_delta_R as get_delta_R_new
+from fourier_accountant.compute_delta import get_delta_S as get_delta_S_new
 
 __all__ = ['get_delta_R', 'get_delta_S']
 
