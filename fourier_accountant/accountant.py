@@ -1,7 +1,13 @@
 import typing
 import numpy as np
 import scipy.special
+import warnings
 from fourier_accountant.plds import PrivacyLossDistribution, PrivacyException, DiscretePrivacyLossDistribution
+
+_DEBUG_PRINTS = True
+def _dprint(debug_message: str) -> None:
+    if _DEBUG_PRINTS:
+        print(f"DEBUG: {debug_message}")
 
 __all__ = ['get_delta_upper_bound', 'get_delta_lower_bound', 'get_epsilon_upper_bound', 'get_epsilon_lower_bound']
 
@@ -65,11 +71,11 @@ def _get_delta_error_term(
     if lambd is None:
         lambd = .5 * L
 
-    assert np.size(ps) == np.size(Lxs)
+    assert np.size(ps) == np.size(Lxs), "Counts of probabilities and privacy loss values do not match"
     nonzero_probability_filter = ~np.isclose(ps, 0)
     ps = ps[nonzero_probability_filter]
     Lxs = Lxs[nonzero_probability_filter]
-    assert np.all(ps > 0)
+    assert np.all(ps > 0), "Non-positive probabilities for privacy loss values."
 
     # Compute the lambda-divergence \alpha^+
     alpha_plus = scipy.special.logsumexp(np.log(ps) + lambd * Lxs)
@@ -104,7 +110,7 @@ def _delta_fft_computations(omegas: np.ndarray, num_compositions: int) -> np.nda
     """
     # Flip omegas, i.e. fx <- D(omega_y), the matrix D = [0 I;I 0]
     nx = len(omegas)
-    assert nx % 2 == 0
+    assert nx % 2 == 0, "Number of omegas not even"
     half = nx // 2
     fx = np.concatenate((omegas[half:], omegas[:half]))
     assert np.size(fx) == np.size(omegas)
@@ -118,7 +124,9 @@ def _delta_fft_computations(omegas: np.ndarray, num_compositions: int) -> np.nda
     # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
     cfx = np.concatenate((cfx[half:], cfx[:half]))
 
-    return cfx # todo(lumip): there are sometimes values < 0, all quite small, probably should be 0 but numerical precision strikes... problem?
+    _dprint(f"_delta_fft_computations: {np.sum(omegas)=}, {np.sum(cfx)=}")
+
+    return cfx
 
 def _compute_delta(
         convolved_omegas: np.ndarray, target_eps: float, L: float, compute_derivative: bool=False
@@ -149,7 +157,11 @@ def _compute_delta(
     assert np.all(exp_e > 0)
 
     integrand = exp_e * convolved_omegas
-    assert np.all(~(integrand < 0 ) | np.isclose(integrand, 0)), "encountered negative values in pld after composition"
+    _dprint(f"_compute_delta: {convolved_omegas.min()=}, {integrand.min()=}")
+    if np.any((integrand < 0) & ~np.isclose(integrand, 0)):
+        raise RuntimeError(
+            "Encountered negative values in pld after composition. Try increasing the number of discretisation bins."
+        )
 
     delta = np.sum(integrand)
 
@@ -193,6 +205,18 @@ def get_delta_upper_bound(
 
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
     delta += error_term
+    _dprint(f"get_delta_upper_bound: {delta=}, {error_term=}")
+
+    if error_term > 1:
+        warnings.warn(
+            f"The computed approximation error ({error_term}) is larger than 1. "
+            f"Try increasing the number of approximation bins."
+        )
+
+    if delta < 0:
+        warnings.warn(
+            f"The computed value for delta ({delta}) is less than 0."
+        )
 
     return np.clip(delta, 0., 1.)
 
@@ -231,6 +255,19 @@ def get_delta_lower_bound(
 
     error_term = _get_delta_error_term(Lxs, ps, num_compositions, L)
     delta -= error_term
+
+    _dprint(f"get_delta_lower_bound: {delta=}, {error_term=}")
+
+    if error_term > 1:
+        warnings.warn(
+            f"The computed approximation error ({error_term}) is larger than 1. "
+            f"Try increasing the number of approximation bins."
+        )
+
+    if delta < 0:
+        warnings.warn(
+            f"The computed value for delta ({delta}) is less than 0."
+        )
 
     return np.clip(delta, 0., 1.)
 

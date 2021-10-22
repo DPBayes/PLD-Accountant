@@ -4,6 +4,8 @@ import numpy as np
 import scipy.special
 import scipy.optimize
 from enum import Enum
+import warnings
+
 
 class NeighborRelation(Enum):
     REMOVE_POISSON = 'remove-poisson'
@@ -151,9 +153,6 @@ class ExponentialMechanism(DiscretePrivacyLossDistribution):
 class SubsampledGaussianMechanism(PrivacyLossDistribution):
     """ The privacy loss distribution of the subsampled Gaussian mechanism
     with noise σ², subsampling ratio q.
-
-    It is assumed that the provided noise level corresponds to a sensitivity
-    of the mechanism of 1 in remove relation.
     """
 
     def __init__(self,
@@ -161,15 +160,15 @@ class SubsampledGaussianMechanism(PrivacyLossDistribution):
         ) -> None:
         """
         Args:
-            - sigma: Gaussian mechanism noise level for sensitivity 1.
+            - sigma: Gaussian mechanism noise level (without factoring in sensitivity or subsampling).
             - q: Subsampling ratio.
             - relation: The neighboring relation for datasets.
         """
         self.sigma = np.abs(sigma)
         self.q = q
         self._evaluate_internals = None
-        if self.q < 0 or self.q > 1:
-            raise ValueError(f"Subsampling ratio q must be between 0 and 1, was {q}.")
+        if self.q <= 0 or self.q > 1:
+            raise ValueError(f"Subsampling ratio q must be larger than 0 and less than or equal to 1, was {q}.")
         if relation == NeighborRelation.REMOVE_POISSON:
             self._evaluate_internals = self._evaluate_internals_remove_relation
         elif relation == NeighborRelation.SUBSTITUTE_NO_REPLACE:
@@ -199,7 +198,9 @@ class SubsampledGaussianMechanism(PrivacyLossDistribution):
             np.maximum(0, max_boundary_id - 1),
             np.minimum(nx - 1, max_boundary_id + 1)
         )
-        max_domain = (np.maximum(np.log(1 - self.q), Xn[max_domain_ids[0]]), Xn[max_domain_ids[1]])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            max_domain = (np.maximum(np.log(1 - self.q), Xn[max_domain_ids[0]]), Xn[max_domain_ids[1]])
         opt_result = scipy.optimize.minimize_scalar(
             lambda x: -self.evaluate(x), bounds=max_domain, method='bounded'
         )
@@ -317,7 +318,7 @@ class SubsampledGaussianMechanism(PrivacyLossDistribution):
         # dlogpart_right /= (4 * c * sqrtpart)
         # dLinvx = (sigma_sq / logpart) * (dlogpart_left + dlogpart_right)
 
-        # note: slightly massages implementation of derivative dLinvx:
+        # note: slightly massaged implementation of derivative dLinvx:
         dsqrtpart = c_sq_exp_x_4 - 2 * (1 - q)**2 * exp_x * (1 - exp_x)
         dsqrtpart /= 2*sqrtpart
         dlogpart = (1 - q) * exp_x + dsqrtpart # without factor 2*c
